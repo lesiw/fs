@@ -30,6 +30,11 @@
 // Paths are relative to the filesystem root. Implementations may accept
 // absolute paths depending on their backing storage.
 //
+// A trailing slash indicates a directory path. [Create]("foo") creates a file
+// named "foo" and opens it for writing, while [Create]("foo/") creates a
+// directory named "foo" and opens it for writing as a tar stream. This
+// convention applies to [Open], [Create], [Append], and [Truncate].
+//
 // # Virtual Directories
 //
 // Some filesystems use virtual directories that don't physically exist. Object
