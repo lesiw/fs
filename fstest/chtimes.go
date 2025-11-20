@@ -46,6 +46,9 @@ func testChtimes(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Verify modification time changed
 	info, statErr := fs.Stat(ctx, fsys, fileName)
 	if statErr != nil {
+		if errors.Is(statErr, fs.ErrUnsupported) {
+			t.Skip("Stat not supported")
+		}
 		t.Fatalf("Stat(%q): %v", fileName, statErr)
 	}
 
