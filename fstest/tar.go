@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"path"
 	"slices"
 	"testing"
 
@@ -74,7 +75,7 @@ func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 			if readErr != nil {
 				t.Fatalf("ReadAll(%q): %v", hdr.Name, readErr)
 			}
-			foundFiles[hdr.Name] = data
+			foundFiles[path.Clean(hdr.Name)] = data
 		}
 	}
 
@@ -156,7 +157,7 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 			if readErr != nil {
 				t.Fatalf("ReadAll(%q): %v", hdr.Name, readErr)
 			}
-			foundFiles[hdr.Name] = data
+			foundFiles[path.Clean(hdr.Name)] = data
 		}
 	}
 
