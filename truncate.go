@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	"errors"
+	"io"
 )
 
 // A TruncateFS is a file system with the Truncate method.
@@ -41,7 +42,7 @@ type TruncateDirFS interface {
 // operation. Otherwise, the error comes from the truncate operation itself.
 //
 // If the filesystem does not implement [TruncateFS] (or [TruncateDirFS] for
-// directories) and size is 0, Truncate falls back to emptying via [Create]
+// directories), Truncate falls back to [ReadFile]+[Remove]+[Create]+[Write]
 // for files or [RemoveAll]+[Mkdir] for directories.
 func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 	// Check if this is a directory (trailing slash)
@@ -52,38 +53,75 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 
 	// Try native Truncate first
 	if tfs, ok := fsys.(TruncateFS); ok {
-		return tfs.Truncate(ctx, name, size)
-	}
-
-	// Fallback: if size is 0, check existence first if possible
-	if size == 0 {
-		// If we can stat, verify the file exists
-		if sfs, ok := fsys.(StatFS); ok {
-			_, err := sfs.Stat(ctx, name)
-			if err != nil {
-				// File doesn't exist or other error - return it
-				return &PathError{
-					Op:   "truncate",
-					Path: name,
-					Err:  err,
-				}
-			}
-		}
-
-		// File exists (or we can't check) - truncate via Create
-		f, err := Create(ctx, fsys, name)
-		if err != nil {
+		err := tfs.Truncate(ctx, name, size)
+		if err == nil || !errors.Is(err, ErrUnsupported) {
 			return err
 		}
-		return f.Close()
+		// Fall through to fallback if ErrUnsupported
 	}
 
-	// No fallback for non-zero sizes
-	return &PathError{
-		Op:   "truncate",
-		Path: name,
-		Err:  ErrUnsupported,
+	// Fallback: read existing content, remove, recreate with truncated content
+	// Read up to 'size' bytes from the existing file
+	f, err := Open(ctx, fsys, name)
+	if err != nil {
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  err,
+		}
 	}
+	content := make([]byte, size)
+	n, readErr := io.ReadFull(f, content)
+	closeErr := f.Close()
+	if closeErr != nil {
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  closeErr,
+		}
+	}
+	if readErr != nil && readErr != io.ErrUnexpectedEOF {
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  readErr,
+		}
+	}
+	// If file was smaller than size, extend with zeros
+	content = content[:n]
+	if int64(n) < size {
+		content = append(content, make([]byte, size-int64(n))...)
+	}
+
+	// Remove the file
+	if err := Remove(ctx, fsys, name); err != nil {
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  err,
+		}
+	}
+
+	// Create new file with truncated content
+	w, err := Create(ctx, fsys, name)
+	if err != nil {
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  err,
+		}
+	}
+	if len(content) > 0 {
+		if _, err := w.Write(content); err != nil {
+			_ = w.Close()
+			return &PathError{
+				Op:   "truncate",
+				Path: name,
+				Err:  err,
+			}
+		}
+	}
+	return w.Close()
 }
 
 // truncateDirAsTar empties a directory.

@@ -12,6 +12,27 @@ import (
 func testTruncate(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Helper()
 
+	// Check if Truncate is supported (either native or via fallback)
+	_, hasTruncate := fsys.(fs.TruncateFS)
+	_, hasRemove := fsys.(fs.RemoveFS)
+	_, hasCreate := fsys.(fs.CreateFS)
+
+	// Skip if neither native TruncateFS nor all fallback requirements
+	// are present. Fallback requires: StatFS (for existence check),
+	// FS (for Open/Read), RemoveFS, and CreateFS
+	if !hasTruncate && !hasRemove {
+		t.Skip(
+			"Truncate not supported " +
+				"(requires TruncateFS or RemoveFS+CreateFS)",
+		)
+	}
+	if !hasTruncate && !hasCreate {
+		t.Skip(
+			"Truncate not supported " +
+				"(requires TruncateFS or RemoveFS+CreateFS)",
+		)
+	}
+
 	// Create test file with initial content
 	fileName := "test_truncate.txt"
 	testData := []byte("hello world this is a test")
@@ -30,23 +51,19 @@ func testTruncate(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Truncate to smaller size
 	newSize := int64(5)
 	err := fs.Truncate(ctx, fsys, fileName, newSize)
-
-	// ErrUnsupported is acceptable (capability not implemented)
 	if err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Logf("Truncate not supported: %v", err)
-			return
-		}
 		t.Fatalf("Truncate(%q, %d): %v", fileName, newSize, err)
 	}
 
-	// Verify new size
+	// Verify new size (skip size check if Stat not supported)
 	info, statErr := fs.Stat(ctx, fsys, fileName)
 	if statErr != nil {
-		t.Fatalf("Stat(%q): %v", fileName, statErr)
-	}
-
-	if info.Size() != newSize {
+		if errors.Is(statErr, fs.ErrUnsupported) {
+			t.Log("Stat not supported, skipping size verification")
+		} else {
+			t.Fatalf("Stat(%q): %v", fileName, statErr)
+		}
+	} else if info.Size() != newSize {
 		t.Errorf(
 			"Truncate(%q, %d): Size() = %d, want %d",
 			fileName, newSize, info.Size(), newSize,
@@ -75,10 +92,12 @@ func testTruncate(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	info, statErr = fs.Stat(ctx, fsys, fileName)
 	if statErr != nil {
-		t.Fatalf("Stat(%q): %v", fileName, statErr)
-	}
-
-	if info.Size() != largerSize {
+		if errors.Is(statErr, fs.ErrUnsupported) {
+			t.Log("Stat not supported, skipping size verification")
+		} else {
+			t.Fatalf("Stat(%q): %v", fileName, statErr)
+		}
+	} else if info.Size() != largerSize {
 		t.Errorf(
 			"Truncate(%q, %d): Size() = %d, want %d",
 			fileName, largerSize, info.Size(), largerSize,
