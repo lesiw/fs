@@ -2,6 +2,7 @@ package fs
 
 import (
 	"context"
+	"errors"
 	"io"
 )
 
@@ -24,7 +25,11 @@ type RenameFS interface {
 // and [RemoveFS] support.
 func Rename(ctx context.Context, fsys FS, oldname, newname string) error {
 	if rfs, ok := fsys.(RenameFS); ok {
-		return rfs.Rename(ctx, oldname, newname)
+		err := rfs.Rename(ctx, oldname, newname)
+		if err == nil || !errors.Is(err, ErrUnsupported) {
+			return err
+		}
+		// Fall through to fallback if ErrUnsupported
 	}
 
 	// Fallback: copy file and delete original

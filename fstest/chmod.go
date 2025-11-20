@@ -43,6 +43,9 @@ func testChmod(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Verify new permissions
 	info, statErr := fs.Stat(ctx, fsys, fileName)
 	if statErr != nil {
+		if errors.Is(statErr, fs.ErrUnsupported) {
+			t.Skip("Stat not supported")
+		}
 		t.Fatalf("Stat(%q): %v", fileName, statErr)
 	}
 
@@ -77,6 +80,9 @@ func testChmod(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	info, statErr = fs.Stat(ctx, fsys, dirName)
 	if statErr != nil {
+		if errors.Is(statErr, fs.ErrUnsupported) {
+			t.Skip("Stat not supported")
+		}
 		t.Fatalf("Stat(%q): %v", dirName, statErr)
 	}
 

@@ -21,16 +21,12 @@ type RemoveFS interface {
 // Returns an error if the file does not exist or if a directory is not
 // empty.
 func Remove(ctx context.Context, fsys FS, name string) error {
-	rfs, ok := fsys.(RemoveFS)
-	if !ok {
-		return &PathError{
-			Op:   "remove",
-			Path: name,
-			Err:  ErrUnsupported,
+	if rfs, ok := fsys.(RemoveFS); ok {
+		if err := rfs.Remove(ctx, name); !errors.Is(err, ErrUnsupported) {
+			return newPathError("remove", name, err)
 		}
 	}
-
-	return rfs.Remove(ctx, name)
+	return &PathError{Op: "remove", Path: name, Err: ErrUnsupported}
 }
 
 // A RemoveAllFS is a file system with the RemoveAll method.

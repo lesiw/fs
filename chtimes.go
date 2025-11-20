@@ -2,6 +2,7 @@ package fs
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -18,14 +19,11 @@ type ChtimesFS interface {
 func Chtimes(
 	ctx context.Context, fsys FS, name string, atime, mtime time.Time,
 ) error {
-	cfs, ok := fsys.(ChtimesFS)
-	if !ok {
-		return &PathError{
-			Op:   "chtimes",
-			Path: name,
-			Err:  ErrUnsupported,
+	if cfs, ok := fsys.(ChtimesFS); ok {
+		err := cfs.Chtimes(ctx, name, atime, mtime)
+		if !errors.Is(err, ErrUnsupported) {
+			return newPathError("chtimes", name, err)
 		}
 	}
-
-	return cfs.Chtimes(ctx, name, atime, mtime)
+	return &PathError{Op: "chtimes", Path: name, Err: ErrUnsupported}
 }

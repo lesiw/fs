@@ -300,6 +300,15 @@ type Mode = fs.FileMode
 // PathError records an error and the operation and file path that caused it.
 type PathError = fs.PathError
 
+// newPathError creates a PathError if err is not nil, otherwise returns nil.
+// This is useful for wrapping errors while preserving nil returns.
+func newPathError(op, path string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &PathError{Op: op, Path: path, Err: err}
+}
+
 // Generic file system errors.
 var (
 	ErrInvalid     = fs.ErrInvalid

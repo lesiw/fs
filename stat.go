@@ -1,6 +1,9 @@
 package fs
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // A StatFS is a file system with the Stat method.
 type StatFS interface {
@@ -14,14 +17,10 @@ type StatFS interface {
 // Analogous to: [io/fs.Stat], [os.Stat], stat, ls -l, 9P Tstat,
 // S3 HeadObject.
 func Stat(ctx context.Context, fsys FS, name string) (FileInfo, error) {
-	sfs, ok := fsys.(StatFS)
-	if !ok {
-		return nil, &PathError{
-			Op:   "stat",
-			Path: name,
-			Err:  ErrUnsupported,
+	if sfs, ok := fsys.(StatFS); ok {
+		if info, err := sfs.Stat(ctx, name); !errors.Is(err, ErrUnsupported) {
+			return info, newPathError("stat", name, err)
 		}
 	}
-
-	return sfs.Stat(ctx, name)
+	return nil, &PathError{Op: "stat", Path: name, Err: ErrUnsupported}
 }

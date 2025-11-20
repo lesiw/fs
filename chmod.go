@@ -2,6 +2,7 @@ package fs
 
 import (
 	"context"
+	"errors"
 )
 
 // A ChmodFS is a file system with the Chmod method.
@@ -17,14 +18,10 @@ type ChmodFS interface {
 func Chmod(
 	ctx context.Context, fsys FS, name string, mode Mode,
 ) error {
-	cfs, ok := fsys.(ChmodFS)
-	if !ok {
-		return &PathError{
-			Op:   "chmod",
-			Path: name,
-			Err:  ErrUnsupported,
+	if cfs, ok := fsys.(ChmodFS); ok {
+		if err := cfs.Chmod(ctx, name, mode); !errors.Is(err, ErrUnsupported) {
+			return newPathError("chmod", name, err)
 		}
 	}
-
-	return cfs.Chmod(ctx, name, mode)
+	return &PathError{Op: "chmod", Path: name, Err: ErrUnsupported}
 }

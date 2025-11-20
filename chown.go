@@ -1,6 +1,9 @@
 package fs
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // A ChownFS is a file system with the Chown method.
 type ChownFS interface {
@@ -15,14 +18,11 @@ type ChownFS interface {
 // Analogous to: [os.Chown], [os.Lchown], chown, 9P Twstat.
 // This is typically a Unix-specific operation.
 func Chown(ctx context.Context, fsys FS, name string, uid, gid int) error {
-	cfs, ok := fsys.(ChownFS)
-	if !ok {
-		return &PathError{
-			Op:   "chown",
-			Path: name,
-			Err:  ErrUnsupported,
+	if cfs, ok := fsys.(ChownFS); ok {
+		err := cfs.Chown(ctx, name, uid, gid)
+		if !errors.Is(err, ErrUnsupported) {
+			return newPathError("chown", name, err)
 		}
 	}
-
-	return cfs.Chown(ctx, name, uid, gid)
+	return &PathError{Op: "chown", Path: name, Err: ErrUnsupported}
 }

@@ -34,16 +34,12 @@ type MkdirFS interface {
 // directory does not exist. Use [MkdirAll] to create parent directories
 // automatically.
 func Mkdir(ctx context.Context, fsys FS, name string) error {
-	mfs, ok := fsys.(MkdirFS)
-	if !ok {
-		return &PathError{
-			Op:   "mkdir",
-			Path: name,
-			Err:  ErrUnsupported,
+	if mfs, ok := fsys.(MkdirFS); ok {
+		if err := mfs.Mkdir(ctx, name); !errors.Is(err, ErrUnsupported) {
+			return newPathError("mkdir", name, err)
 		}
 	}
-
-	return mfs.Mkdir(ctx, name)
+	return &PathError{Op: "mkdir", Path: name, Err: ErrUnsupported}
 }
 
 // MkdirAll creates a directory named name, along with any necessary parents.
