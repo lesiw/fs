@@ -224,6 +224,11 @@ func TestFS(
 		testTempDir(ctx, t, fsys)
 	})
 
+	// Test working directory context
+	t.Run("WorkDir", func(t *testing.T) {
+		testWorkDir(ctx, t, fsys)
+	})
+
 	// Stress tests combining multiple operations
 	t.Run("Stress", func(t *testing.T) {
 		t.Run("MixedOperations", func(t *testing.T) {
