@@ -229,6 +229,44 @@ func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	}
 
+	// Verify Size() is correct for files
+	for _, entry := range entries {
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			t.Errorf("entry.Info() for %q: %v", entry.Name(), infoErr)
+			continue
+		}
+
+		if entry.Name() == "file1.txt" {
+			if info.Size() != int64(len(file1Data)) {
+				t.Errorf(
+					"ReadDir(%q) entry %q: Size() = %d, want %d",
+					dir, entry.Name(), info.Size(), len(file1Data),
+				)
+			}
+		}
+		if entry.Name() == "file2.txt" {
+			if info.Size() != int64(len(file2Data)) {
+				t.Errorf(
+					"ReadDir(%q) entry %q: Size() = %d, want %d",
+					dir, entry.Name(), info.Size(), len(file2Data),
+				)
+			}
+		}
+	}
+
+	// Test ReadDir on a file (should return error or empty iterator)
+	// ReadDir on a file path should fail - it's not a directory
+	var fileReadCount int
+	for _, err := range rdfs.ReadDir(ctx, file1) {
+		if err == nil {
+			fileReadCount++
+		}
+	}
+	if got, want := fileReadCount, 0; got != want {
+		t.Errorf("ReadDir(%q): got %d entries, want %d", file1, got, want)
+	}
+
 	// Clean up
 	if err := fs.RemoveAll(ctx, fsys, dir); err != nil {
 		t.Fatalf("RemoveAll(%q): %v", dir, err)
