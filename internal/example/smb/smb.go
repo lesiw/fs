@@ -14,6 +14,7 @@ import (
 	"iter"
 	"net"
 	"os"
+	"path"
 	"time"
 
 	"github.com/hirochachacha/go-smb2"
@@ -73,6 +74,13 @@ func (f *FS) Close() error {
 	return f.session.Logoff()
 }
 
+func (f *FS) fullPath(ctx context.Context, name string) string {
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		name = path.Join(workDir, name)
+	}
+	return name
+}
+
 // Open implements fs.FS.
 func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	if name == "" {
@@ -83,7 +91,7 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 		}
 	}
 
-	file, err := f.share.Open(name)
+	file, err := f.share.Open(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, convertError("open", name, err)
 	}
@@ -102,7 +110,7 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	}
 
 	file, err := f.share.OpenFile(
-		name,
+		f.fullPath(ctx, name),
 		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 		os.FileMode(fs.FileMode(ctx)),
 	)
@@ -124,7 +132,7 @@ func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	}
 
 	file, err := f.share.OpenFile(
-		name,
+		f.fullPath(ctx, name),
 		os.O_WRONLY|os.O_CREATE|os.O_APPEND,
 		os.FileMode(fs.FileMode(ctx)),
 	)
@@ -145,7 +153,7 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 		}
 	}
 
-	info, err := f.share.Stat(name)
+	info, err := f.share.Stat(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, convertError("stat", name, err)
 	}
@@ -162,7 +170,7 @@ func (f *FS) ReadDir(
 			name = "."
 		}
 
-		entries, err := f.share.ReadDir(name)
+		entries, err := f.share.ReadDir(f.fullPath(ctx, name))
 		if err != nil {
 			yield(nil, convertError("readdir", name, err))
 			return
@@ -188,7 +196,8 @@ func (f *FS) Mkdir(
 		}
 	}
 
-	if err := f.share.Mkdir(name, os.FileMode(fs.DirMode(ctx))); err != nil {
+	err := f.share.Mkdir(f.fullPath(ctx, name), os.FileMode(fs.DirMode(ctx)))
+	if err != nil {
 		return convertError("mkdir", name, err)
 	}
 
@@ -205,7 +214,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 		}
 	}
 
-	if err := f.share.Remove(name); err != nil {
+	if err := f.share.Remove(f.fullPath(ctx, name)); err != nil {
 		return convertError("remove", name, err)
 	}
 
@@ -224,7 +233,8 @@ func (f *FS) Rename(
 		}
 	}
 
-	if err := f.share.Rename(oldname, newname); err != nil {
+	err := f.share.Rename(f.fullPath(ctx, oldname), f.fullPath(ctx, newname))
+	if err != nil {
 		return convertError("rename", oldname, err)
 	}
 

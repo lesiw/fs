@@ -16,6 +16,7 @@ import (
 	"io"
 	"iter"
 	"os"
+	"path"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -72,14 +73,14 @@ func (f *FS) SetBasePath(path string) {
 	f.basePath = path
 }
 
-func (f *FS) fullPath(name string) string {
-	if f.basePath == "" {
-		return name
+func (f *FS) fullPath(ctx context.Context, name string) string {
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		name = path.Join(workDir, name)
 	}
-	if name == "" || name == "." {
-		return f.basePath
+	if f.basePath != "" {
+		name = path.Join(f.basePath, name)
 	}
-	return f.basePath + "/" + name
+	return name
 }
 
 // Close closes the SFTP client and underlying SSH connection.
@@ -101,7 +102,7 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 		}
 	}
 
-	file, err := f.client.Open(f.fullPath(name))
+	file, err := f.client.Open(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, convertError("open", name, err)
 	}
@@ -120,7 +121,7 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	}
 
 	file, err := f.client.OpenFile(
-		f.fullPath(name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		f.fullPath(ctx, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 	)
 	if err != nil {
 		return nil, convertError("create", name, err)
@@ -145,7 +146,7 @@ func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	}
 
 	file, err := f.client.OpenFile(
-		f.fullPath(name), os.O_WRONLY|os.O_CREATE|os.O_APPEND,
+		f.fullPath(ctx, name), os.O_WRONLY|os.O_CREATE|os.O_APPEND,
 	)
 	if err != nil {
 		return nil, convertError("append", name, err)
@@ -169,7 +170,7 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 		}
 	}
 
-	info, err := f.client.Stat(f.fullPath(name))
+	info, err := f.client.Stat(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, convertError("stat", name, err)
 	}
@@ -186,7 +187,7 @@ func (f *FS) ReadDir(
 			name = "."
 		}
 
-		entries, err := f.client.ReadDir(f.fullPath(name))
+		entries, err := f.client.ReadDir(f.fullPath(ctx, name))
 		if err != nil {
 			yield(nil, convertError("readdir", name, err))
 			return
@@ -212,12 +213,12 @@ func (f *FS) Mkdir(
 		}
 	}
 
-	if err := f.client.Mkdir(f.fullPath(name)); err != nil {
+	if err := f.client.Mkdir(f.fullPath(ctx, name)); err != nil {
 		return convertError("mkdir", name, err)
 	}
 
 	mode := os.FileMode(fs.DirMode(ctx))
-	if err := f.client.Chmod(f.fullPath(name), mode); err != nil {
+	if err := f.client.Chmod(f.fullPath(ctx, name), mode); err != nil {
 		return convertError("chmod", name, err)
 	}
 
@@ -234,7 +235,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 		}
 	}
 
-	if err := f.client.Remove(f.fullPath(name)); err != nil {
+	if err := f.client.Remove(f.fullPath(ctx, name)); err != nil {
 		return convertError("remove", name, err)
 	}
 
@@ -253,7 +254,7 @@ func (f *FS) Rename(
 		}
 	}
 
-	err := f.client.Rename(f.fullPath(oldname), f.fullPath(newname))
+	err := f.client.Rename(f.fullPath(ctx, oldname), f.fullPath(ctx, newname))
 	if err != nil {
 		return convertError("rename", oldname, err)
 	}
@@ -273,7 +274,8 @@ func (f *FS) Chmod(
 		}
 	}
 
-	if err := f.client.Chmod(f.fullPath(name), os.FileMode(mode)); err != nil {
+	err := f.client.Chmod(f.fullPath(ctx, name), os.FileMode(mode))
+	if err != nil {
 		return convertError("chmod", name, err)
 	}
 
@@ -290,7 +292,7 @@ func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
 		}
 	}
 
-	if err := f.client.Chown(f.fullPath(name), uid, gid); err != nil {
+	if err := f.client.Chown(f.fullPath(ctx, name), uid, gid); err != nil {
 		return convertError("chown", name, err)
 	}
 
@@ -309,7 +311,8 @@ func (f *FS) Chtimes(
 		}
 	}
 
-	if err := f.client.Chtimes(f.fullPath(name), atime, mtime); err != nil {
+	err := f.client.Chtimes(f.fullPath(ctx, name), atime, mtime)
+	if err != nil {
 		return convertError("chtimes", name, err)
 	}
 
@@ -328,7 +331,7 @@ func (f *FS) Symlink(
 		}
 	}
 
-	if err := f.client.Symlink(oldname, f.fullPath(newname)); err != nil {
+	if err := f.client.Symlink(oldname, f.fullPath(ctx, newname)); err != nil {
 		return convertError("symlink", newname, err)
 	}
 
@@ -345,7 +348,7 @@ func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
 		}
 	}
 
-	target, err := f.client.ReadLink(f.fullPath(name))
+	target, err := f.client.ReadLink(f.fullPath(ctx, name))
 	if err != nil {
 		return "", convertError("readlink", name, err)
 	}
