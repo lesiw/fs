@@ -77,36 +77,23 @@ func New(root string) (*FS, error) {
 }
 
 // resolvePath converts a relative fs path to an absolute OS path.
-func (f *FS) resolvePath(name string) (string, error) {
-	// Check for path escapes before joining
+// If ctx contains a working directory via fs.WorkDir(), paths are resolved
+// relative to that working directory within the filesystem root.
+func (f *FS) resolvePath(ctx context.Context, name string) (string, error) {
+	name = filepath.Clean(name)
 	if filepath.IsAbs(name) {
-		return "", &fs.PathError{
-			Op:   "resolve",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
+		return name, nil
 	}
-	clean := filepath.Clean(name)
-	sep := string(filepath.Separator)
-	if clean == ".." || hasPathPrefix(clean, ".."+sep) {
-		return "", &fs.PathError{
-			Op:   "resolve",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
+	base := f.root
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		base = filepath.Join(f.root, filepath.FromSlash(workDir))
 	}
-	// Join with root and clean the path
-	return filepath.Join(f.root, filepath.FromSlash(name)), nil
-}
-
-// hasPathPrefix reports whether the path s begins with prefix.
-func hasPathPrefix(s, prefix string) bool {
-	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+	return filepath.Join(base, filepath.FromSlash(name)), nil
 }
 
 // Open implements fs.FS
 func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +104,7 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 func (f *FS) Create(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +116,7 @@ func (f *FS) Create(
 func (f *FS) Append(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +126,7 @@ func (f *FS) Append(
 
 // Stat implements fs.StatFS
 func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +138,7 @@ func (f *FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
-		path, err := f.resolvePath(name)
+		path, err := f.resolvePath(ctx, name)
 		if err != nil {
 			yield(nil, err)
 			return
@@ -197,7 +184,7 @@ func (de *dirEntry) Path() string               { return "" }
 
 // Remove implements fs.RemoveFS
 func (f *FS) Remove(ctx context.Context, name string) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -206,7 +193,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 
 // Mkdir implements fs.MkdirFS
 func (f *FS) Mkdir(ctx context.Context, name string) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -216,11 +203,11 @@ func (f *FS) Mkdir(ctx context.Context, name string) error {
 
 // Rename implements fs.RenameFS
 func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
-	oldpath, err := f.resolvePath(oldname)
+	oldpath, err := f.resolvePath(ctx, oldname)
 	if err != nil {
 		return err
 	}
-	newpath, err := f.resolvePath(newname)
+	newpath, err := f.resolvePath(ctx, newname)
 	if err != nil {
 		return err
 	}
@@ -229,7 +216,7 @@ func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
 
 // Truncate implements fs.TruncateFS
 func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -240,7 +227,7 @@ func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
 func (f *FS) Chtimes(
 	ctx context.Context, name string, atime, mtime time.Time,
 ) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -249,7 +236,7 @@ func (f *FS) Chtimes(
 
 // Symlink implements fs.SymlinkFS
 func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
-	newpath, err := f.resolvePath(newname)
+	newpath, err := f.resolvePath(ctx, newname)
 	if err != nil {
 		return err
 	}
@@ -260,7 +247,7 @@ func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
 
 // ReadLink implements fs.ReadLinkFS
 func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return "", err
 	}
@@ -269,7 +256,7 @@ func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
 
 // Lstat implements fs.LstatFS
 func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
 	}

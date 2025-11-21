@@ -11,7 +11,7 @@ import (
 
 // Chmod implements fs.ChmodFS on Unix systems.
 func (f *FS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func (f *FS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
 
 // Chown implements fs.ChownFS on Unix systems.
 func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
-	path, err := f.resolvePath(name)
+	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
 	}
