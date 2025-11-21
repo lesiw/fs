@@ -7,6 +7,7 @@ type contextKey int
 const (
 	dirModeKey contextKey = iota
 	fileModeKey
+	workDirKey
 )
 
 // WithDirMode returns a context that carries a directory mode for automatic
@@ -43,4 +44,23 @@ func FileMode(ctx context.Context) Mode {
 		return mode
 	}
 	return 0644
+}
+
+// WithWorkDir returns a context that carries a working directory for
+// relative path resolution. Filesystem implementations should resolve
+// relative paths relative to this directory.
+//
+// If no working directory is set, implementations should use their default
+// working directory (typically the current working directory).
+func WithWorkDir(ctx context.Context, dir string) context.Context {
+	return context.WithValue(ctx, workDirKey, dir)
+}
+
+// WorkDir retrieves the working directory from context.
+// Returns an empty string if no working directory is set.
+func WorkDir(ctx context.Context) string {
+	if dir, ok := ctx.Value(workDirKey).(string); ok {
+		return dir
+	}
+	return ""
 }
