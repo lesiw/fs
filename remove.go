@@ -20,6 +20,8 @@ type RemoveFS interface {
 // Analogous to: [os.Remove], rm, 9P Tremove, S3 DeleteObject.
 // Returns an error if the file does not exist or if a directory is not
 // empty.
+//
+// Requires: [RemoveFS]
 func Remove(ctx context.Context, fsys FS, name string) error {
 	if rfs, ok := fsys.(RemoveFS); ok {
 		if err := rfs.Remove(ctx, name); !errors.Is(err, ErrUnsupported) {
@@ -43,9 +45,8 @@ type RemoveAllFS interface {
 // RemoveAll removes name and any children it contains.
 // Analogous to: [os.RemoveAll], rm -rf.
 //
-// If fsys implements [RemoveAllFS], RemoveAll uses the native implementation.
-// Otherwise, RemoveAll falls back to recursive removal using [RemoveFS],
-// [StatFS], and [ReadDirFS].
+// Requires: [RemoveAllFS] ||
+// ([RemoveFS] && [StatFS] && ([ReadDirFS] || [WalkFS]))
 func RemoveAll(ctx context.Context, fsys FS, name string) error {
 	// Check for efficient RemoveAll implementation first
 	if rafs, ok := fsys.(RemoveAllFS); ok {

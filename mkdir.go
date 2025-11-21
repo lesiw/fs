@@ -33,6 +33,8 @@ type MkdirFS interface {
 // Mkdir returns an error if the directory already exists or if the parent
 // directory does not exist. Use [MkdirAll] to create parent directories
 // automatically.
+//
+// Requires: [MkdirFS]
 func Mkdir(ctx context.Context, fsys FS, name string) error {
 	if mfs, ok := fsys.(MkdirFS); ok {
 		if err := mfs.Mkdir(ctx, name); !errors.Is(err, ErrUnsupported) {
@@ -52,6 +54,8 @@ func Mkdir(ctx context.Context, fsys FS, name string) error {
 //	fs.MkdirAll(ctx, fsys, "a/b/c")  // All created with mode 0700
 //
 // If name is already a directory, MkdirAll does nothing and returns nil.
+//
+// Requires: [MkdirFS]
 func MkdirAll(ctx context.Context, fsys FS, name string) error {
 	mfs, ok := fsys.(MkdirFS)
 	if !ok {

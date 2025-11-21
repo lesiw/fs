@@ -27,6 +27,8 @@ type ReadLinkFS interface {
 
 // Symlink creates newname as a symbolic link to oldname.
 // Analogous to: [os.Symlink], ln -s, 9P2000.u Tsymlink.
+//
+// Requires: [SymlinkFS]
 func Symlink(
 	ctx context.Context, fsys FS, oldname, newname string,
 ) error {
@@ -44,6 +46,8 @@ func Symlink(
 // Analogous to: [os.Readlink], readlink, 9P2000.u Treadlink.
 // If the link destination is relative, ReadLink returns the relative path
 // without resolving it to an absolute one.
+//
+// Requires: [ReadLinkFS]
 func ReadLink(ctx context.Context, fsys FS, name string) (string, error) {
 	if rfs, ok := fsys.(ReadLinkFS); ok {
 		return rfs.ReadLink(ctx, name)
@@ -60,7 +64,7 @@ func ReadLink(ctx context.Context, fsys FS, name string) (string, error) {
 // If the file is a symbolic link, the returned FileInfo describes the
 // symbolic link. Lstat makes no attempt to follow the link.
 //
-// If fsys does not implement [ReadLinkFS], Lstat falls back to [Stat].
+// Requires: [ReadLinkFS] || [StatFS]
 func Lstat(ctx context.Context, fsys FS, name string) (FileInfo, error) {
 	if rfs, ok := fsys.(ReadLinkFS); ok {
 		return rfs.Lstat(ctx, name)

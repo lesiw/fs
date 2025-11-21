@@ -46,24 +46,27 @@ type AppendDirFS interface {
 // Analogous to: [os.OpenFile] with O_APPEND, echo >>, tar (append mode), 9P
 // Topen with OAPPEND.
 //
-// For files: Writes are added to the end of the file. If the file does not
-// exist, it is created with mode 0644 (or the mode specified via
-// [WithFileMode]).
-//
-// For directories (trailing slash): Returns a tar stream writer that extracts
-// files into the directory. The directory is created if it doesn't exist.
-// Existing files with the same names are overwritten, but other files in the
-// directory are preserved.
-//
 // If the parent directory does not exist and the filesystem implements
 // [MkdirFS], Append automatically creates the parent directories with
 // mode 0755 (or the mode specified via [WithDirMode]).
 //
-// If the filesystem does not implement [AppendFS] (or [DirFS] for
-// directories), Append falls back to reading the existing file (if it exists)
-// and creating a new file with the combined content on Close().
-//
 // The returned [io.WriteCloser] must be closed when done.
+//
+// # Files
+//
+// Writes are added to the end of the file. If the file does not exist, it is
+// created with mode 0644 (or the mode specified via [WithFileMode]).
+//
+// Requires: [AppendFS] || ([FS] && [CreateFS])
+//
+// # Directories
+//
+// A trailing slash (/) returns a tar stream writer that extracts files into
+// the directory. The directory is created if it doesn't exist. Existing files
+// with the same names are overwritten, but other files in the directory are
+// preserved.
+//
+// Requires: [AppendDirFS] || [CreateFS]
 func Append(
 	ctx context.Context, fsys FS, name string,
 ) (io.WriteCloser, error) {

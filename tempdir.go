@@ -13,9 +13,7 @@ import (
 // The directory name will have the pattern prefix-randomhex.
 // The caller is responsible for removing the directory when done.
 //
-// If fsys implements [TempFS], TempDir uses the native implementation.
-// Otherwise, TempDir falls back to creating a directory with a random
-// name in the current directory (requires [MkdirFS]).
+// Requires: [TempFS] || [MkdirFS]
 func TempDir(ctx context.Context, fsys FS, prefix string) (string, error) {
 	if tfs, ok := fsys.(TempFS); ok {
 		dir, err := tfs.TempDir(ctx, prefix)

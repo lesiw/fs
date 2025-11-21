@@ -31,19 +31,23 @@ type TruncateDirFS interface {
 // Truncate changes the size of the named file or empties a directory.
 // Analogous to: [os.Truncate], truncate, 9P Twstat.
 //
-// For files: If the file is larger than size, it is truncated. If it is
-// smaller, it is extended with zeros.
-//
-// For directories (trailing slash): Removes all contents, leaving an empty
-// directory.
-//
 // Like [os.Truncate], Truncate returns an error if the path doesn't exist.
 // If [StatFS] is available, the existence check happens before attempting the
 // operation. Otherwise, the error comes from the truncate operation itself.
 //
-// If the filesystem does not implement [TruncateFS] (or [TruncateDirFS] for
-// directories), Truncate falls back to [ReadFile]+[Remove]+[Create]+[Write]
-// for files or [RemoveAll]+[Mkdir] for directories.
+// # Files
+//
+// If the file is larger than size, it is truncated. If it is smaller, it is
+// extended with zeros.
+//
+// Requires: [TruncateFS] || ([FS] && [RemoveFS] && [CreateFS])
+//
+// # Directories
+//
+// A trailing slash (/) indicates a directory. Removes all contents, leaving
+// an empty directory.
+//
+// Requires: [TruncateDirFS] || ([RemoveAllFS] && [MkdirFS])
 func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 	// Check if this is a directory (trailing slash)
 	if len(name) > 0 && name[len(name)-1] == '/' {

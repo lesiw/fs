@@ -15,6 +15,8 @@ import "context"
 // mode 0755 (or the mode specified via WithDirMode).
 //
 // This is analogous to os.WriteFile and io/fs.ReadFile.
+//
+// Requires: [CreateFS]
 func WriteFile(
 	ctx context.Context, fsys FS, name string, data []byte,
 ) error {

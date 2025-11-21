@@ -28,9 +28,8 @@ type GlobFS interface {
 // The only possible returned error is [path.ErrBadPattern], reporting that
 // the pattern is malformed.
 //
-// If fsys implements [GlobFS], Glob calls fsys.Glob.
-// Otherwise, Glob uses [ReadDir] to traverse the directory tree
-// and look for matches (requires [StatFS] and [ReadDirFS]).
+// Requires: [GlobFS] ||
+// ([StatFS] && ([ReadDirFS] || [WalkFS]))
 func Glob(ctx context.Context, fsys FS, pattern string) ([]string, error) {
 	if gfs, ok := fsys.(GlobFS); ok {
 		matches, err := gfs.Glob(ctx, pattern)

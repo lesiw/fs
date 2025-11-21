@@ -16,6 +16,8 @@ type StatFS interface {
 // Stat returns file metadata for the named file.
 // Analogous to: [io/fs.Stat], [os.Stat], stat, ls -l, 9P Tstat,
 // S3 HeadObject.
+//
+// Requires: [StatFS]
 func Stat(ctx context.Context, fsys FS, name string) (FileInfo, error) {
 	if sfs, ok := fsys.(StatFS); ok {
 		if info, err := sfs.Stat(ctx, name); !errors.Is(err, ErrUnsupported) {

@@ -1,4 +1,5 @@
 //go:build !remote
+
 package ssh
 
 import (

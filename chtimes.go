@@ -16,6 +16,8 @@ type ChtimesFS interface {
 
 // Chtimes changes the access and modification times of the named file.
 // Analogous to: [os.Chtimes], touch -t, 9P Twstat.
+//
+// Requires: [ChtimesFS]
 func Chtimes(
 	ctx context.Context, fsys FS, name string, atime, mtime time.Time,
 ) error {

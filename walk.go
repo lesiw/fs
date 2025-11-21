@@ -42,8 +42,7 @@ type WalkFS interface {
 // entries. Analogous to: [os.ReadDir], [io/fs.ReadDir], ls, 9P Tread on
 // directory.
 //
-// If fsys implements [ReadDirFS], ReadDir calls fsys.ReadDir.
-// Otherwise, ReadDir falls back to [Walk] with depth 1.
+// Requires: [ReadDirFS] || [WalkFS]
 func ReadDir(
 	ctx context.Context, fsys FS, name string,
 ) iter.Seq2[DirEntry, error] {
@@ -88,8 +87,7 @@ func ReadDir(
 // DirEntry and the error. The caller can choose to continue iterating
 // (skip that directory) or break to stop the walk.
 //
-// If fsys implements [WalkFS], Walk calls fsys.Walk.
-// Otherwise, Walk falls back to breadth-first traversal using [ReadDirFS].
+// Requires: [WalkFS] || [ReadDirFS]
 func Walk(
 	ctx context.Context, fsys FS, root string, depth int,
 ) iter.Seq2[DirEntry, error] {

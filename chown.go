@@ -17,6 +17,8 @@ type ChownFS interface {
 // Chown changes the numeric uid and gid of the named file.
 // Analogous to: [os.Chown], [os.Lchown], chown, 9P Twstat.
 // This is typically a Unix-specific operation.
+//
+// Requires: [ChownFS]
 func Chown(ctx context.Context, fsys FS, name string, uid, gid int) error {
 	if cfs, ok := fsys.(ChownFS); ok {
 		err := cfs.Chown(ctx, name, uid, gid)

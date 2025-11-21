@@ -19,8 +19,7 @@ type ReadFileFS interface {
 // ReadFile reads the named file and returns its contents.
 // Analogous to: [io/fs.ReadFile], [os.ReadFile], cat.
 //
-// If fsys implements [ReadFileFS], ReadFile calls fsys.ReadFile.
-// Otherwise, ReadFile falls back to [Open] and [io.ReadAll].
+// Requires: [ReadFileFS] || [FS]
 func ReadFile(ctx context.Context, fsys FS, name string) ([]byte, error) {
 	if rffs, ok := fsys.(ReadFileFS); ok {
 		data, err := rffs.ReadFile(ctx, name)

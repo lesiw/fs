@@ -19,10 +19,7 @@ type RenameFS interface {
 // Analogous to: [os.Rename], mv, 9P2000.u Trename.
 // If newname already exists and is not a directory, Rename replaces it.
 //
-// If the filesystem does not implement [RenameFS], Rename falls back to
-// copying oldname to newname and then removing oldname. This requires
-// [CreateFS]
-// and [RemoveFS] support.
+// Requires: [RenameFS] || ([FS] && [CreateFS] && [RemoveFS])
 func Rename(ctx context.Context, fsys FS, oldname, newname string) error {
 	if rfs, ok := fsys.(RenameFS); ok {
 		err := rfs.Rename(ctx, oldname, newname)

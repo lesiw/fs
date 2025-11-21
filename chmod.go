@@ -15,6 +15,8 @@ type ChmodFS interface {
 
 // Chmod changes the mode of the named file to mode.
 // Analogous to: [os.Chmod], chmod, 9P Twstat.
+//
+// Requires: [ChmodFS]
 func Chmod(
 	ctx context.Context, fsys FS, name string, mode Mode,
 ) error {

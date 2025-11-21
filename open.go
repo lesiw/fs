@@ -39,17 +39,25 @@ type DirFS interface {
 // Open opens the named file or directory for reading.
 // Analogous to: [io/fs.Open], [os.Open], cat, tar, 9P Topen, S3 GetObject.
 //
-// When opening a file, returns an [io.ReadCloser] for reading the file
-// contents. When opening a directory, returns a tar archive stream of
-// the directory contents.
-// A trailing slash (/) in the name indicates a directory.
-//
 // All paths use forward slashes (/) regardless of the operating system,
 // following [io/fs] conventions. Use the [path] package (not [path/filepath])
 // for path manipulation. Implementations handle OS-specific conversion
 // internally.
 //
 // The returned [io.ReadCloser] must be closed when done.
+//
+// # Files
+//
+// Returns an [io.ReadCloser] for reading the file contents.
+//
+// Requires: [FS]
+//
+// # Directories
+//
+// A trailing slash (/) or a path identified as a directory via [StatFS]
+// returns a tar archive stream of the directory contents.
+//
+// Requires: [DirFS] || ([FS] && ([ReadDirFS] || [WalkFS]))
 func Open(ctx context.Context, fsys FS, name string) (io.ReadCloser, error) {
 	// Check if name has trailing slash - indicates directory
 	if len(name) > 0 && name[len(name)-1] == '/' {
