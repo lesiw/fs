@@ -26,6 +26,7 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("MkdirAll(): %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, baseDir)
 	if err := fs.MkdirAll(ctx, fsys, baseDir+"/d/e"); err != nil {
 		t.Fatalf("MkdirAll(): %v", err)
 	}
@@ -130,16 +131,6 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 			t.Errorf("Stat(%q) after remove succeeded, want error", removeFile)
 		}
 	}
-
-	// Clean up entire tree
-	if err := fs.RemoveAll(ctx, fsys, baseDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", baseDir, err)
-	}
-
-	// Verify cleanup
-	if _, err := fs.Stat(ctx, fsys, baseDir); err == nil {
-		t.Errorf("Stat(%q) after RemoveAll succeeded, want error", baseDir)
-	}
 }
 
 // TestConcurrentReads tests that multiple concurrent read operations work
@@ -158,6 +149,7 @@ func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("Mkdir(%q): %v", testDir, mkdirErr)
 	}
+	cleanup(ctx, t, fsys, testDir)
 
 	type fileInfo struct {
 		path    string
@@ -215,11 +207,6 @@ func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 			t.Errorf("Close() reader %d: %v", i, err)
 		}
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", testDir, err)
-	}
 }
 
 // TestModifyAndRead tests a realistic workflow of creating, modifying, and
@@ -235,6 +222,7 @@ func testModifyAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("Mkdir(%q): %v", testDir, mkdirErr)
 	}
+	cleanup(ctx, t, fsys, testDir)
 
 	filePath := testDir + "/data.txt"
 
@@ -315,10 +303,5 @@ func testModifyAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 			"append ReadFile(%q) = %q, want %q",
 			filePath, data, expected,
 		)
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", testDir, err)
 	}
 }

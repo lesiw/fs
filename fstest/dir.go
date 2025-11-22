@@ -27,6 +27,7 @@ func testMkdir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if err != nil {
 		t.Fatalf("Mkdir(%q): %v", dir, err)
 	}
+	cleanup(ctx, t, fsys, dir)
 
 	// If filesystem implements MkdirFS, we can stat the empty directory
 	if hasMkdirFS {
@@ -76,11 +77,6 @@ func testMkdir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		// Some implementations may make Mkdir idempotent, which is acceptable
 		t.Logf("Mkdir(%q) on existing directory succeeded (idempotent)", dir)
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, dir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", dir, err)
-	}
 }
 
 // TestMkdirAll tests creating nested directories.
@@ -100,6 +96,7 @@ func testMkdirAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if err != nil {
 		t.Fatalf("MkdirAll(%q): %v", path, err)
 	}
+	cleanup(ctx, t, fsys, "test_mkdirall")
 
 	// If filesystem implements MkdirFS, we can stat the empty directory
 	if hasMkdirFS {
@@ -138,11 +135,6 @@ func testMkdirAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if err := fs.MkdirAll(ctx, fsys, existingDir); err != nil {
 		t.Errorf("MkdirAll(%q) on existing directory: %v", existingDir, err)
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, "test_mkdirall"); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", "test_mkdirall", err)
-	}
 }
 
 // TestReadDir tests reading directory contents.
@@ -164,6 +156,7 @@ func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("Mkdir(%q): %v", dir, mkdirErr)
 	}
+	cleanup(ctx, t, fsys, dir)
 
 	// Create files and subdirectories
 	file1Data := []byte("one")
@@ -265,10 +258,5 @@ func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 	if got, want := fileReadCount, 0; got != want {
 		t.Errorf("ReadDir(%q): got %d entries, want %d", file1, got, want)
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, dir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", dir, err)
 	}
 }

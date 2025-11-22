@@ -21,6 +21,7 @@ func testWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("mkdir: %v", err)
 	}
+	cleanup(ctx, t, fsys, "data")
 
 	testContent := []byte("hello from data")
 	err := fs.WriteFile(ctx, fsys, "data/file.txt", testContent)
@@ -49,10 +50,5 @@ func testWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 			"working directory read: got %q, want %q",
 			string(buf), string(testContent),
 		)
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, "data"); err != nil {
-		t.Fatalf("cleanup: %v", err)
 	}
 }

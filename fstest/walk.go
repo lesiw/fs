@@ -70,6 +70,7 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir a: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, "a")
 	if err := fs.Mkdir(ctx, fsys, "a/deep"); err != nil {
 		t.Fatalf("mkdir a/deep: %v", err)
 	}
@@ -84,6 +85,7 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if err := fs.Mkdir(ctx, fsys, "b"); err != nil {
 		t.Fatalf("mkdir b: %v", err)
 	}
+	cleanup(ctx, t, fsys, "b")
 	file2Data := []byte("two")
 	file2 := "b/file2.txt"
 	if err := fs.WriteFile(ctx, fsys, file2, file2Data); err != nil {
@@ -99,6 +101,7 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("write c.txt: %v", err)
 	}
+	cleanup(ctx, t, fsys, "c.txt")
 
 	expected := []string{
 		"a", "a/deep", "a/deep/file1.txt", "b", "b/file2.txt", "c.txt",
@@ -136,17 +139,6 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS) {
 			t.Errorf("expected file not found: %s", path)
 		}
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, "a"); err != nil {
-		t.Fatalf("cleanup a: %v", err)
-	}
-	if err := fs.RemoveAll(ctx, fsys, "b"); err != nil {
-		t.Fatalf("cleanup b: %v", err)
-	}
-	if err := fs.Remove(ctx, fsys, "c.txt"); err != nil {
-		t.Fatalf("cleanup c.txt: %v", err)
-	}
 }
 
 // TestWalkBreadthFirst specifically tests that breadth-first ordering
@@ -169,6 +161,7 @@ func testWalkBreadthFirst(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir test_bfs: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, "test_bfs")
 	if err := fs.Mkdir(ctx, fsys, "test_bfs/a"); err != nil {
 		t.Fatalf("mkdir test_bfs/a: %v", err)
 	}
@@ -222,11 +215,6 @@ func testWalkBreadthFirst(ctx context.Context, t *testing.T, fsys fs.FS) {
 			}
 		}
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, "test_bfs"); err != nil {
-		t.Fatalf("cleanup test_bfs: %v", err)
-	}
 }
 
 // TestWalkLexicographic tests that entries at the same depth are in
@@ -249,6 +237,7 @@ func testWalkLexicographic(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir test_lex: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, "test_lex")
 	if err := fs.Mkdir(ctx, fsys, "test_lex/z"); err != nil {
 		t.Fatalf("mkdir test_lex/z: %v", err)
 	}
@@ -284,11 +273,6 @@ func testWalkLexicographic(ctx context.Context, t *testing.T, fsys fs.FS) {
 			}
 		}
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, "test_lex"); err != nil {
-		t.Fatalf("cleanup test_lex: %v", err)
-	}
 }
 
 // TestWalkDepth tests that Walk correctly respects maxDepth parameter.
@@ -313,6 +297,7 @@ func testWalkDepth(
 	if mkdirErr != nil {
 		t.Fatalf("mkdir %s: %v", testDir, mkdirErr)
 	}
+	cleanup(ctx, t, fsys, testDir)
 	level1 := testDir + "/level1"
 	if err := fs.Mkdir(ctx, fsys, level1); err != nil {
 		t.Fatalf("mkdir level1: %v", err)
@@ -342,11 +327,6 @@ func testWalkDepth(
 			)
 		}
 	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("cleanup %s: %v", testDir, err)
-	}
 }
 
 // TestWalkEmpty tests that Walk works correctly on an empty filesystem.
@@ -368,6 +348,7 @@ func testWalkEmpty(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir test_empty: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, "test_empty")
 
 	// Walk empty directory - may or may not include root depending on
 	// implementation
@@ -396,11 +377,6 @@ func testWalkEmpty(ctx context.Context, t *testing.T, fsys fs.FS) {
 			count,
 		)
 	}
-
-	// Clean up
-	if err := fs.Remove(ctx, fsys, "test_empty"); err != nil {
-		t.Fatalf("cleanup test_empty: %v", err)
-	}
 }
 
 // TestWalkSingleLevel tests Walk with maxDepth=1 (equivalent to ls).
@@ -423,6 +399,7 @@ func testWalkSingleLevel(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir test_single: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, testDir)
 	file1Data := []byte("one")
 	file1 := testDir + "/file1.txt"
 	if err := fs.WriteFile(ctx, fsys, file1, file1Data); err != nil {
@@ -483,10 +460,5 @@ func testWalkSingleLevel(ctx context.Context, t *testing.T, fsys fs.FS) {
 				exp, names,
 			)
 		}
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("cleanup test_single: %v", err)
 	}
 }

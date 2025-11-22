@@ -39,6 +39,7 @@ func testGlob(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdir: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, globDir)
 	if err := fs.Mkdir(ctx, fsys, globDir+"/sub"); err != nil {
 		t.Fatalf("mkdir sub: %v", err)
 	}
@@ -100,10 +101,5 @@ func testGlob(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	if len(matches) != 0 {
 		t.Errorf("glob *.nonexistent: expected no matches, got %v", matches)
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, globDir); err != nil {
-		t.Fatalf("cleanup: %v", err)
 	}
 }
