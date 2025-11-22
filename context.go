@@ -1,6 +1,9 @@
 package fs
 
-import "context"
+import (
+	"context"
+	"path"
+)
 
 type contextKey int
 
@@ -50,9 +53,18 @@ func FileMode(ctx context.Context) Mode {
 // relative path resolution. Filesystem implementations should resolve
 // relative paths relative to this directory.
 //
+// If dir is relative and ctx already has a working directory, WithWorkDir
+// composes them, like cd. If dir is absolute, it replaces any existing
+// working directory.
+//
 // If no working directory is set, implementations should use their default
 // working directory (typically the current working directory).
 func WithWorkDir(ctx context.Context, dir string) context.Context {
+	if path.IsAbs(dir) {
+		return context.WithValue(ctx, workDirKey, dir)
+	} else if prev := WorkDir(ctx); prev != "" {
+		dir = path.Join(prev, dir)
+	}
 	return context.WithValue(ctx, workDirKey, dir)
 }
 
