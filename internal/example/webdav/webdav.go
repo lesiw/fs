@@ -43,9 +43,18 @@ func New(url, user, password string) (*FS, error) {
 	return &FS{client: client}, nil
 }
 
+// fullPath resolves the full path by prepending the working directory from
+// context if present.
+func (f *FS) fullPath(ctx context.Context, name string) string {
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		name = path.Join(workDir, name)
+	}
+	return name
+}
+
 // Open implements fs.FS
 func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
-	data, err := f.client.Read(name)
+	data, err := f.client.Read(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -61,7 +70,7 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	return &webdavWriteCloser{
 		client:     f.client,
-		name:       name,
+		name:       f.fullPath(ctx, name),
 		buf:        &bytes.Buffer{},
 		mustUpload: true,
 	}, nil
@@ -69,14 +78,15 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 
 // Append implements fs.AppendFS
 func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
+	fullPath := f.fullPath(ctx, name)
 	wc := &webdavWriteCloser{
 		client:     f.client,
-		name:       name,
+		name:       fullPath,
 		buf:        &bytes.Buffer{},
 		mustUpload: true,
 	}
 
-	data, err := f.client.Read(name)
+	data, err := f.client.Read(fullPath)
 	if err == nil {
 		wc.buf.Write(data)
 	}
@@ -120,7 +130,7 @@ func (w *webdavWriteCloser) Close() error {
 
 // Stat implements fs.StatFS
 func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
-	info, err := f.client.Stat(name)
+	info, err := f.client.Stat(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
 			Op:   "stat",
@@ -142,17 +152,18 @@ func (f *FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
-		if name == "." {
-			name = "/"
-		} else if !strings.HasPrefix(name, "/") {
-			name = "/" + name
+		fullPath := f.fullPath(ctx, name)
+		if fullPath == "." {
+			fullPath = "/"
+		} else if !strings.HasPrefix(fullPath, "/") {
+			fullPath = "/" + fullPath
 		}
 
-		infos, err := f.client.ReadDir(name)
+		infos, err := f.client.ReadDir(fullPath)
 		if err != nil {
 			yield(nil, &fs.PathError{
 				Op:   "readdir",
-				Path: name,
+				Path: fullPath,
 				Err:  err,
 			})
 			return
@@ -175,6 +186,7 @@ func (f *FS) ReadDir(
 
 // Remove implements fs.RemoveFS
 func (f *FS) Remove(ctx context.Context, name string) error {
+	fullPath := f.fullPath(ctx, name)
 	// Check if this is a directory
 	info, statErr := f.Stat(ctx, name)
 	if statErr == nil && info.IsDir() {
@@ -186,17 +198,17 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 			// Found at least one entry - directory not empty
 			return &fs.PathError{
 				Op:   "remove",
-				Path: name,
+				Path: fullPath,
 				Err:  fmt.Errorf("directory not empty"),
 			}
 		}
 	}
 
-	err := f.client.Remove(name)
+	err := f.client.Remove(fullPath)
 	if err != nil {
 		return &fs.PathError{
 			Op:   "remove",
-			Path: name,
+			Path: fullPath,
 			Err:  err,
 		}
 	}
@@ -206,7 +218,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 // Mkdir implements fs.MkdirFS
 func (f *FS) Mkdir(ctx context.Context, name string) error {
 	perm := fs.DirMode(ctx)
-	err := f.client.Mkdir(name, perm)
+	err := f.client.Mkdir(f.fullPath(ctx, name), perm)
 	if err != nil {
 		return &fs.PathError{
 			Op:   "mkdir",
@@ -219,7 +231,9 @@ func (f *FS) Mkdir(ctx context.Context, name string) error {
 
 // Rename implements fs.RenameFS
 func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
-	err := f.client.Rename(oldname, newname, false)
+	err := f.client.Rename(
+		f.fullPath(ctx, oldname), f.fullPath(ctx, newname), false,
+	)
 	if err != nil {
 		return &fs.PathError{
 			Op:   "rename",
