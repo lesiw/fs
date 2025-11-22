@@ -157,3 +157,23 @@ func (fi *httpFileInfo) Mode() fs.Mode {
 	}
 	return fs.Mode(0444)
 }
+
+// Abs implements fs.AbsFS
+func (f *HTTPFS) Abs(ctx context.Context, name string) (string, error) {
+	// Resolve with WorkDir if present
+	fullPath := name
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		fullPath = path.Join(workDir, name)
+	}
+
+	// Clean the path
+	cleanPath := path.Clean(fullPath)
+
+	// Join with base URL
+	if path.IsAbs(cleanPath) {
+		return f.baseURL + cleanPath, nil
+	}
+
+	// Relative path - prepend /
+	return f.baseURL + "/" + cleanPath, nil
+}

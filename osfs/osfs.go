@@ -263,6 +263,35 @@ func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
 	return os.Lstat(path)
 }
 
+// Abs implements fs.AbsFS
+func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+	// If already absolute, return as-is
+	if filepath.IsAbs(name) {
+		return filepath.Clean(name), nil
+	}
+
+	// Resolve relative to root + WorkDir
+	path, err := f.resolvePath(ctx, name)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Clean(path), nil
+}
+
+// Rel implements fs.RelFS
+func (f *FS) Rel(
+	ctx context.Context, basepath, targpath string,
+) (string, error) {
+	// Use filepath.Rel for OS-specific path handling
+	rel, err := filepath.Rel(basepath, targpath)
+	if err != nil {
+		return "", err
+	}
+	// Convert to forward slashes for fs consistency
+	return filepath.ToSlash(rel), nil
+}
+
 // Close removes the temporary directory if this filesystem was created with
 // New(""). If the filesystem was created with a specific root directory,
 // Close does nothing and returns nil.
@@ -289,5 +318,7 @@ var (
 	_ fs.ReadDirFS  = (*FS)(nil)
 	_ fs.SymlinkFS  = (*FS)(nil)
 	_ fs.ReadLinkFS = (*FS)(nil)
+	_ fs.AbsFS      = (*FS)(nil)
+	_ fs.RelFS      = (*FS)(nil)
 	_ io.Closer     = (*FS)(nil)
 )

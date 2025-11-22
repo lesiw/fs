@@ -418,3 +418,29 @@ func (de *sshDirEntry) Info() (fs.FileInfo, error) {
 }
 
 func (de *sshDirEntry) Path() string { return "" }
+
+// Abs implements fs.AbsFS
+func (f *SSHFS) Abs(ctx context.Context, name string) (string, error) {
+	// If already absolute, return as-is
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
+	}
+
+	// If we have an absolute WorkDir, we can resolve the path
+	workDir := fs.WorkDir(ctx)
+	if workDir != "" && path.IsAbs(workDir) {
+		fullPath := path.Join(workDir, name)
+		if f.prefix != "" {
+			fullPath = path.Join(f.prefix, fullPath)
+		}
+		return fullPath, nil
+	}
+
+	// If we only have a prefix, we can use that
+	if f.prefix != "" && path.IsAbs(f.prefix) {
+		return path.Join(f.prefix, name), nil
+	}
+
+	// Otherwise, we can't determine an absolute path
+	return "", &fs.PathError{Op: "abs", Path: name, Err: fs.ErrUnsupported}
+}

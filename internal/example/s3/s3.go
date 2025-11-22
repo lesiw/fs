@@ -354,6 +354,31 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 	return nil
 }
 
+// Abs implements fs.AbsFS
+func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+	// If already an s3:// URL, return as-is
+	if strings.HasPrefix(name, "s3://") {
+		return name, nil
+	}
+
+	// Resolve with WorkDir if present
+	fullPath := name
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		fullPath = path.Join(workDir, name)
+	}
+
+	// Clean the path
+	cleanPath := path.Clean(fullPath)
+
+	// Convert to s3:// format
+	if path.IsAbs(cleanPath) {
+		return fmt.Sprintf("s3://%s%s", f.bucket, cleanPath), nil
+	}
+
+	// Relative path - prepend /
+	return fmt.Sprintf("s3://%s/%s", f.bucket, cleanPath), nil
+}
+
 // Compile-time interface checks
 var (
 	_ fs.FS        = (*FS)(nil)
@@ -362,4 +387,5 @@ var (
 	_ fs.StatFS    = (*FS)(nil)
 	_ fs.ReadDirFS = (*FS)(nil)
 	_ fs.RemoveFS  = (*FS)(nil)
+	_ fs.AbsFS     = (*FS)(nil)
 )

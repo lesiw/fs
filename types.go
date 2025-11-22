@@ -69,23 +69,25 @@
 //
 // Optional write and metadata interfaces:
 //
-//   - [CreateFS] - Create or truncate files for writing
+//   - [AbsFS] - Absolute path resolution
+//   - [AppendDirFS] - Write tar streams to directories
 //   - [AppendFS] - Append to existing files
-//   - [MkdirFS] - Create directories
-//   - [RemoveFS] - Delete files and empty directories
-//   - [RemoveAllFS] - Recursively delete directories
-//   - [RenameFS] - Move or rename files
-//   - [StatFS] - Query file metadata
-//   - [ReadDirFS] - List directory contents
 //   - [ChmodFS] - Change file permissions
 //   - [ChownFS] - Change file ownership
 //   - [ChtimesFS] - Change file timestamps
-//   - [SymlinkFS] - Create symbolic links
-//   - [ReadLinkFS] - Read symlink targets and stat without following
+//   - [CreateFS] - Create or truncate files for writing
 //   - [DirFS] - Read directories as tar streams
-//   - [AppendDirFS] - Write tar streams to directories
-//   - [TruncateDirFS] - Efficiently empty directories
+//   - [MkdirFS] - Create directories
+//   - [ReadDirFS] - List directory contents
+//   - [ReadLinkFS] - Read symlink targets and stat without following
+//   - [RelFS] - Relative path computation
+//   - [RemoveAllFS] - Recursively delete directories
+//   - [RemoveFS] - Delete files and empty directories
+//   - [RenameFS] - Move or rename files
+//   - [StatFS] - Query file metadata
+//   - [SymlinkFS] - Create symbolic links
 //   - [TempFS] - Native temporary directory support
+//   - [TruncateDirFS] - Efficiently empty directories
 //   - [WalkFS] - Efficient directory traversal
 //
 // Helper functions check capabilities automatically and return

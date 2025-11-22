@@ -301,3 +301,19 @@ func (de *dirEntry) Info() (fs.FileInfo, error) {
 }
 
 func (de *dirEntry) Path() string { return "" }
+
+// Abs implements fs.AbsFS
+func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+	// If already absolute, return as-is
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
+	}
+
+	// If we have an absolute WorkDir, we can resolve the path
+	if workDir := fs.WorkDir(ctx); workDir != "" && path.IsAbs(workDir) {
+		return path.Join(workDir, name), nil
+	}
+
+	// Otherwise, we can't determine an absolute path
+	return "", &fs.PathError{Op: "abs", Path: name, Err: fs.ErrUnsupported}
+}

@@ -416,3 +416,14 @@ func (de *dirEntry) Info() (fs.FileInfo, error) {
 }
 
 func (de *dirEntry) Path() string { return "" }
+
+// Abs implements fs.AbsFS
+func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+	// If already absolute, return as-is
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
+	}
+
+	// Resolve relative to basePath + WorkDir
+	return f.fullPath(ctx, name), nil
+}

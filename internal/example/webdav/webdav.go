@@ -283,6 +283,22 @@ func (de *webdavDirEntry) Info() (fs.FileInfo, error) {
 	}, nil
 }
 
+// Abs implements fs.AbsFS
+func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+	// WebDAV URLs can be absolute, return as-is if already absolute
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
+	}
+
+	// If we have an absolute WorkDir, we can resolve the path
+	if workDir := fs.WorkDir(ctx); workDir != "" && path.IsAbs(workDir) {
+		return path.Join(workDir, name), nil
+	}
+
+	// Otherwise, we can't determine an absolute path
+	return "", &fs.PathError{Op: "abs", Path: name, Err: fs.ErrUnsupported}
+}
+
 // Compile-time interface checks
 var (
 	_ fs.FS        = (*FS)(nil)
@@ -293,4 +309,5 @@ var (
 	_ fs.RemoveFS  = (*FS)(nil)
 	_ fs.MkdirFS   = (*FS)(nil)
 	_ fs.RenameFS  = (*FS)(nil)
+	_ fs.AbsFS     = (*FS)(nil)
 )

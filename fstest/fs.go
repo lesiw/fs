@@ -229,6 +229,15 @@ func TestFS(
 		testWorkDir(ctx, t, fsys)
 	})
 
+	// Test path operations
+	t.Run("Abs", func(t *testing.T) {
+		testAbs(ctx, t, fsys)
+	})
+
+	t.Run("Rel", func(t *testing.T) {
+		testRel(ctx, t, fsys)
+	})
+
 	// Stress tests combining multiple operations
 	t.Run("Stress", func(t *testing.T) {
 		t.Run("MixedOperations", func(t *testing.T) {
