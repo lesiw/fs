@@ -2,12 +2,11 @@ package fs
 
 import (
 	"archive/tar"
-	"bytes"
 	"context"
 	"errors"
 	"io"
-	"path"
-	"slices"
+
+	"lesiw.io/fs/path"
 )
 
 // An AppendFS is a file system with the Append method.
@@ -42,15 +41,17 @@ type AppendDirFS interface {
 	AppendDir(ctx context.Context, dir string) (io.WriteCloser, error)
 }
 
-// Append opens a file for appending or adds files to a directory.
-// Analogous to: [os.OpenFile] with O_APPEND, echo >>, tar (append mode), 9P
-// Topen with OAPPEND.
+// Append opens a file for appending or adds files to a directory. Analogous
+// to: [os.OpenFile] with O_APPEND, echo >>, tar (append mode), 9P Topen with
+// OAPPEND.
 //
 // If the parent directory does not exist and the filesystem implements
-// [MkdirFS], Append automatically creates the parent directories with
-// mode 0755 (or the mode specified via [WithDirMode]).
+// [MkdirFS], Append automatically creates the parent directories with mode
+// 0755 (or the mode specified via [WithDirMode]).
 //
-// The returned [io.WriteCloser] must be closed when done.
+// The returned [WritePathCloser] must be closed when done. The Path() method
+// returns the native filesystem path, or the input path if localization is not
+// supported.
 //
 // # Files
 //
@@ -61,105 +62,81 @@ type AppendDirFS interface {
 //
 // # Directories
 //
-// A trailing slash (/) returns a tar stream writer that extracts files into
-// the directory. The directory is created if it doesn't exist. Existing files
-// with the same names are overwritten, but other files in the directory are
+// A trailing slash returns a tar stream writer that extracts files into the
+// directory. The directory is created if it doesn't exist. Existing files with
+// the same names are overwritten, but other files in the directory are
 // preserved.
 //
 // Requires: [AppendDirFS] || [CreateFS]
 func Append(
 	ctx context.Context, fsys FS, name string,
-) (io.WriteCloser, error) {
-	// Check if this is a directory path (trailing slash)
-	if len(name) > 0 && name[len(name)-1] == '/' {
-		dirName := name[:len(name)-1]
-		return appendDirAsTar(ctx, fsys, dirName)
+) (WritePathCloser, error) {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return nil, err
 	}
-	// Check if filesystem supports Append natively
-	if afs, ok := fsys.(AppendFS); ok {
-		f, err := afs.Append(ctx, name)
-		if err == nil {
-			return f, nil
-		}
 
-		// If the error is ErrNotExist, try to create parent directories
-		if !errors.Is(err, ErrNotExist) {
+	if path.IsDir(name) {
+		w, err := appendDirAsTar(ctx, fsys, name)
+		if err != nil {
 			return nil, err
 		}
-
-		// Check if filesystem supports mkdir
-		if _, ok := fsys.(MkdirFS); !ok {
-			return nil, err // Return original error if mkdir not supported
-		}
-
-		// Create parent directory
-		dir := path.Dir(name)
-		if dir == "." || dir == name {
-			return nil, err // No parent to create
-		}
-
-		mkdirErr := MkdirAll(ctx, fsys, dir)
-		if mkdirErr != nil {
-			return nil, err // Return original error, not mkdir error
-		}
-
-		// Try again after creating parent
-		return afs.Append(ctx, name)
+		return writePathCloser(w, name), nil
 	}
 
-	// Fallback: use ReadFile + Create pattern
-	return appendFallback(ctx, fsys, name)
+	afs, ok := fsys.(AppendFS)
+	if !ok {
+		if w, err := createAppend(ctx, fsys, name); err != nil {
+			return nil, err
+		} else {
+			return writePathCloser(w, name), nil
+		}
+	}
+
+retry:
+	f, err := afs.Append(ctx, name)
+	if err == nil {
+		return writePathCloser(f, name), nil
+	}
+	if errors.Is(err, ErrNotExist) {
+		dir := path.Dir(name)
+		if dir == "." || dir == name {
+			return nil, err // No parent to create.
+		}
+		if merr := MkdirAll(ctx, fsys, dir); merr != nil {
+			// MkdirAll failed. MkdirFS may not be supported.
+			return nil, errors.Join(err, merr)
+		}
+		goto retry // Try again after creating parent.
+	}
+	return writePathCloser(f, name), nil
 }
 
-// appendFallback implements append using ReadFile + Create
-func appendFallback(
+// createAppend implements append using CreateFS.
+func createAppend(
 	ctx context.Context, fsys FS, name string,
 ) (io.WriteCloser, error) {
-	// Read existing content (if file exists)
-	existing, err := ReadFile(ctx, fsys, name)
+	// Open existing file for reading, if it exists.
+	r, err := Open(ctx, fsys, name)
 	if err != nil && !errors.Is(err, ErrNotExist) {
 		return nil, err
 	}
 
-	return &appendWriter{
-		ctx:      ctx,
-		fsys:     fsys,
-		name:     name,
-		existing: existing,
-		buf:      &bytes.Buffer{},
-	}, nil
+	w, err := Create(ctx, fsys, name)
+	if err != nil {
+		if r != nil {
+			_ = r.Close()
+		}
+		return nil, err
+	}
+
+	return newAppendWriter(r, w), nil
 }
 
-// appendWriter buffers writes and combines with existing content on Close
-type appendWriter struct {
-	ctx      context.Context
-	fsys     FS
-	name     string
-	existing []byte
-	buf      *bytes.Buffer
-}
-
-func (w *appendWriter) Write(p []byte) (n int, err error) {
-	return w.buf.Write(p)
-}
-
-func (w *appendWriter) Close() error {
-	// Combine existing content + new writes
-	combined := slices.Concat(w.existing, w.buf.Bytes())
-
-	// Write combined content
-	return WriteFile(w.ctx, w.fsys, w.name, combined)
-}
-
-// appendDirAsTar creates a tar stream for appending to dir in fsys.
-// If fsys implements AppendDirFS, uses the native implementation.
-// If the native implementation returns ErrUnsupported, falls back to
-// extracting files individually using archive/tar.
-//
-// The returned writer must be closed to complete the extraction.
 func appendDirAsTar(
 	ctx context.Context, fsys FS, dir string,
 ) (io.WriteCloser, error) {
+	dir = path.Dir(dir)
 	if tfs, ok := fsys.(AppendDirFS); ok {
 		w, err := tfs.AppendDir(ctx, dir)
 		if err != nil && !errors.Is(err, ErrUnsupported) {
@@ -168,26 +145,14 @@ func appendDirAsTar(
 		if err == nil {
 			return w, nil
 		}
-		// Fall through to fallback if ErrUnsupported
 	}
-	return appendTarFallback(ctx, fsys, dir)
-}
 
-// appendTarFallback extracts a tar archive to the filesystem.
-//
-// The returned WriteCloser must be closed to signal completion and allow
-// the extraction goroutine to terminate. Errors from extraction are
-// reported when Close() is called on the returned writer.
-func appendTarFallback(
-	ctx context.Context, fsys FS, dir string,
-) (io.WriteCloser, error) {
+	// Fallback: Extract one file at a time.
 	pr, pw := io.Pipe()
-
 	go func() {
 		err := extractTarToFS(ctx, fsys, dir, pr)
 		pr.CloseWithError(err)
 	}()
-
 	return pw, nil
 }
 

@@ -9,7 +9,8 @@ import (
 	"lesiw.io/fs"
 )
 
-// Chmod implements fs.ChmodFS on Unix systems.
+var _ fs.ChmodFS = (*FS)(nil)
+
 func (f *FS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -18,7 +19,8 @@ func (f *FS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
 	return os.Chmod(path, mode)
 }
 
-// Chown implements fs.ChownFS on Unix systems.
+var _ fs.ChownFS = (*FS)(nil)
+
 func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -26,9 +28,3 @@ func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
 	}
 	return os.Chown(path, uid, gid)
 }
-
-// Compile-time interface checks for Unix-specific capabilities
-var (
-	_ fs.ChmodFS = (*FS)(nil)
-	_ fs.ChownFS = (*FS)(nil)
-)

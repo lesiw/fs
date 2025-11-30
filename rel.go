@@ -3,8 +3,9 @@ package fs
 import (
 	"context"
 	"errors"
-	"path"
 	"strings"
+
+	"lesiw.io/fs/path"
 )
 
 // A RelFS is a file system with the Rel method.

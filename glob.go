@@ -3,7 +3,8 @@ package fs
 import (
 	"context"
 	"errors"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 // A GlobFS is a file system with the Glob method.
@@ -79,7 +80,10 @@ func globWithLimit(
 	}
 
 	dir, file := path.Split(pattern)
-	dir = cleanGlobPath(dir)
+	// Our Split already returns clean dir without trailing separator
+	if dir == "" {
+		dir = "."
+	}
 
 	if !hasMeta(dir) {
 		return glob(ctx, fsys, dir, file, nil)
@@ -102,16 +106,6 @@ func globWithLimit(
 		}
 	}
 	return
-}
-
-// cleanGlobPath prepares path for glob matching.
-func cleanGlobPath(p string) string {
-	switch p {
-	case "":
-		return "."
-	default:
-		return p[0 : len(p)-1] // chop off trailing separator
-	}
 }
 
 // glob searches for files matching pattern in the directory dir

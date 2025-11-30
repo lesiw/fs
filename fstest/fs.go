@@ -220,8 +220,14 @@ func TestFS(
 	})
 
 	// Test temp operations
-	t.Run("TempDir", func(t *testing.T) {
-		testTempDir(ctx, t, fsys)
+	t.Run("Temp", func(t *testing.T) {
+		t.Run("File", func(t *testing.T) {
+			testTempFile(ctx, t, fsys)
+		})
+
+		t.Run("Dir", func(t *testing.T) {
+			testTempDir(ctx, t, fsys)
+		})
 	})
 
 	// Test working directory context
@@ -236,6 +242,10 @@ func TestFS(
 
 	t.Run("Rel", func(t *testing.T) {
 		testRel(ctx, t, fsys)
+	})
+
+	t.Run("Localize", func(t *testing.T) {
+		TestLocalize(ctx, t, fsys)
 	})
 
 	// Stress tests combining multiple operations

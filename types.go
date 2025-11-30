@@ -23,12 +23,23 @@
 //
 // # Path Handling
 //
-// All paths use forward slashes (/) regardless of operating system, following
-// [io/fs] conventions. Use the [path] package (not [path/filepath]) for path
-// manipulation. Implementations handle OS-specific conversion internally.
+// Path operations are primarily lexical, handled by the [lesiw.io/fs/path]
+// subpackage. This package auto-detects path styles (Unix, Windows, URLs) and
+// applies appropriate rules without accessing the filesystem.
 //
-// Paths are relative to the filesystem root. Implementations may accept
-// absolute paths depending on their backing storage.
+//	import "lesiw.io/fs/path"
+//
+//	path.Join("foo", "bar")              // "foo/bar" (Unix-style)
+//	path.Join("C:\\", "Users", "foo")    // "C:\Users\foo" (Windows-style)
+//	path.Join("https://example.com", "api") // "https://example.com/api"
+//
+// For the rare cases requiring OS-specific path resolution, use [Localize]:
+//
+//	// Converts "dir/file.txt" to "dir\file.txt" on Windows
+//	resolved, err := fs.Localize(ctx, fsys, "dir/file.txt")
+//
+// Operations like [Open] and [Create] automatically call [Localize] when the
+// filesystem implements [LocalizeFS], so explicit calls are rarely needed.
 //
 // A trailing slash indicates a directory path. [Create]("foo") creates a file
 // named "foo" and opens it for writing, while [Create]("foo/") creates a
@@ -77,6 +88,7 @@
 //   - [ChtimesFS] - Change file timestamps
 //   - [CreateFS] - Create or truncate files for writing
 //   - [DirFS] - Read directories as tar streams
+//   - [LocalizeFS] - OS-specific path formatting
 //   - [MkdirFS] - Create directories
 //   - [ReadDirFS] - List directory contents
 //   - [ReadLinkFS] - Read symlink targets and stat without following

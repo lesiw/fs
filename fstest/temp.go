@@ -9,93 +9,147 @@ import (
 	"lesiw.io/fs"
 )
 
-// TestTempDir tests creating temporary directories.
+func testTempFile(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Helper()
+
+	t.Run("CreateAndWrite", func(t *testing.T) {
+		prefix := "test_tempfile"
+		w, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("Temp not supported")
+			}
+			t.Fatalf("Temp(%q) err: %v", prefix, err)
+		}
+		cleanup(ctx, t, fsys, w.Path())
+
+		tempFile := w.Path()
+		if !strings.Contains(tempFile, prefix) {
+			t.Errorf(
+				"Temp(%q) path = %q, want to contain %q",
+				prefix, tempFile, prefix,
+			)
+		}
+
+		testData := []byte("temporary file content")
+		if _, err := w.Write(testData); err != nil {
+			t.Fatalf("Write err: %v", err)
+		}
+
+		if err := w.Close(); err != nil {
+			t.Fatalf("Close err: %v", err)
+		}
+	})
+
+	t.Run("UniqueNames", func(t *testing.T) {
+		prefix := "test_unique"
+		w1, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("Temp not supported")
+			}
+			t.Fatalf("Temp(%q) err: %v", prefix, err)
+		}
+		cleanup(ctx, t, fsys, w1.Path())
+
+		w2, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			t.Fatalf("Temp(%q) second call err: %v", prefix, err)
+		}
+		cleanup(ctx, t, fsys, w2.Path())
+
+		if err := w1.Close(); err != nil {
+			t.Fatalf("Close w1 err: %v", err)
+		}
+		if err := w2.Close(); err != nil {
+			t.Fatalf("Close w2 err: %v", err)
+		}
+
+		if w1.Path() == w2.Path() {
+			t.Errorf(
+				"Temp(%q) created duplicate names: %q",
+				prefix, w1.Path(),
+			)
+		}
+	})
+}
+
 func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Helper()
 
-	// Check if TempDir is supported (either native or via fallback)
-	_, hasTemp := fsys.(fs.TempFS)
-	_, hasMkdir := fsys.(fs.MkdirFS)
-
-	// Skip if neither native TempFS nor fallback requirement
-	// (MkdirFS) is present
-	if !hasTemp && !hasMkdir {
-		t.Skip("TempDir not supported (requires TempFS or MkdirFS)")
-	}
-
-	// Create temp directory with prefix
-	prefix := "test_tempdir"
-	tempDir, err := fs.TempDir(ctx, fsys, prefix)
-
-	// ErrUnsupported is acceptable (capability not implemented)
-	if err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Logf("TempDir not supported: %v", err)
-			return
+	t.Run("CreateAndUse", func(t *testing.T) {
+		prefix := "test_tempdir/"
+		w, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("Temp not supported")
+			}
+			t.Fatalf("Temp(%q) err: %v", prefix, err)
 		}
-		t.Fatalf("TempDir(%q): %v", prefix, err)
-	}
-	t.Cleanup(func() {
-		if removeErr := fs.RemoveAll(ctx, fsys, tempDir); removeErr != nil {
-			t.Errorf("Cleanup: RemoveAll(%q): %v", tempDir, removeErr)
+		cleanup(ctx, t, fsys, w.Path())
+
+		tempDir := w.Path()
+		prefixWithoutSlash := strings.TrimSuffix(prefix, "/")
+		if !strings.Contains(tempDir, prefixWithoutSlash) {
+			t.Errorf(
+				"Temp(%q) path = %q, want to contain %q",
+				prefix, tempDir, prefixWithoutSlash,
+			)
 		}
-	})
 
-	// Verify name contains prefix
-	if !strings.Contains(tempDir, prefix) {
-		t.Errorf(
-			"TempDir(%q): path = %q, want to contain %q",
-			prefix, tempDir, prefix,
-		)
-	}
-
-	// Create file in temp directory to make it visible in implementations
-	// where directories are virtual (like S3)
-	testFile := tempDir + "/test.txt"
-	testData := []byte("temp file content")
-	writeErr := fs.WriteFile(ctx, fsys, testFile, testData)
-	if writeErr != nil {
-		if errors.Is(writeErr, fs.ErrUnsupported) {
-			t.Skip("write operations not supported")
+		if closeErr := w.Close(); closeErr != nil {
+			t.Fatalf("Close err: %v", closeErr)
 		}
-		t.Fatalf("WriteFile(%q): %v", testFile, writeErr)
-	}
 
-	// Verify temp directory exists after creating file in it
-	info, statErr := fs.Stat(ctx, fsys, tempDir)
-	if statErr != nil {
-		t.Fatalf("Stat(%q): %v", tempDir, statErr)
-	}
+		testFile := tempDir + "/test.txt"
+		testData := []byte("temp file content")
+		writeErr := fs.WriteFile(ctx, fsys, testFile, testData)
+		if writeErr != nil {
+			if errors.Is(writeErr, fs.ErrUnsupported) {
+				t.Skip("write operations not supported")
+			}
+			t.Fatalf("WriteFile err: %v", writeErr)
+		}
 
-	if !info.IsDir() {
-		t.Errorf("TempDir(%q): IsDir() = false, want true", prefix)
-	}
+		info, statErr := fs.Stat(ctx, fsys, tempDir)
+		if statErr != nil {
+			t.Fatalf("Stat(%q) err: %v", tempDir, statErr)
+		}
+		if !info.IsDir() {
+			t.Errorf("Stat(%q) IsDir = false, want true", tempDir)
+		}
 
-	// Verify file was created
-	data, readErr := fs.ReadFile(ctx, fsys, testFile)
-	if readErr != nil {
-		t.Fatalf("ReadFile(%q): %v", testFile, readErr)
-	}
-
-	if string(data) != string(testData) {
-		t.Errorf("ReadFile(%q) = %q, want %q", testFile, data, testData)
-	}
-
-	// Create another temp dir to verify uniqueness
-	tempDir2, err2 := fs.TempDir(ctx, fsys, prefix)
-	if err2 != nil {
-		t.Fatalf("TempDir(%q) second call: %v", prefix, err2)
-	}
-	t.Cleanup(func() {
-		if removeErr := fs.RemoveAll(ctx, fsys, tempDir2); removeErr != nil {
-			t.Errorf("Cleanup: RemoveAll(%q): %v", tempDir2, removeErr)
+		data, readErr := fs.ReadFile(ctx, fsys, testFile)
+		if readErr != nil {
+			t.Fatalf("ReadFile err: %v", readErr)
+		}
+		if string(data) != string(testData) {
+			t.Errorf("ReadFile = %q, want %q", data, testData)
 		}
 	})
 
-	if tempDir == tempDir2 {
-		t.Errorf(
-			"TempDir(%q) created duplicate names: %q",
-			prefix, tempDir,
-		)
-	}
+	t.Run("UniqueNames", func(t *testing.T) {
+		prefix := "test_unique/"
+		w1, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("Temp not supported")
+			}
+			t.Fatalf("Temp(%q) err: %v", prefix, err)
+		}
+		cleanup(ctx, t, fsys, w1.Path())
+
+		w2, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			t.Fatalf("Temp(%q) second call err: %v", prefix, err)
+		}
+		cleanup(ctx, t, fsys, w2.Path())
+
+		if w1.Path() == w2.Path() {
+			t.Errorf(
+				"Temp(%q) created duplicate names: %q",
+				prefix, w1.Path(),
+			)
+		}
+	})
 }

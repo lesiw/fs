@@ -3,7 +3,8 @@ package fs
 import (
 	"context"
 	"errors"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 // An AbsFS is a file system with the Abs method.
@@ -56,7 +57,7 @@ func Abs(ctx context.Context, fsys FS, name string) (string, error) {
 		return path.Clean(name), nil
 	}
 
-	// Fallback: if WorkDir is absolute and path is relative, we can compute it
+	// Fallback: if WorkDir is absolute and path is relative, compute it
 	if workDir := WorkDir(ctx); workDir != "" && path.IsAbs(workDir) {
 		return path.Join(workDir, name), nil
 	}

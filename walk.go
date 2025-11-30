@@ -4,8 +4,9 @@ import (
 	"cmp"
 	"context"
 	"iter"
-	"path"
 	"slices"
+
+	"lesiw.io/fs/path"
 )
 
 // A ReadDirFS is a file system with the ReadDir method.

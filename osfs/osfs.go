@@ -24,9 +24,11 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"lesiw.io/fs"
+	fspath "lesiw.io/fs/path"
 )
 
 // FS implements lesiw.io/fs.FS using the OS filesystem.
@@ -91,7 +93,8 @@ func (f *FS) resolvePath(ctx context.Context, name string) (string, error) {
 	return filepath.Join(base, filepath.FromSlash(name)), nil
 }
 
-// Open implements fs.FS
+var _ fs.FS = (*FS)(nil)
+
 func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -100,7 +103,8 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-// Create implements fs.CreateFS
+var _ fs.CreateFS = (*FS)(nil)
+
 func (f *FS) Create(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
@@ -112,7 +116,8 @@ func (f *FS) Create(
 	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 }
 
-// Append implements fs.AppendFS
+var _ fs.AppendFS = (*FS)(nil)
+
 func (f *FS) Append(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
@@ -124,7 +129,8 @@ func (f *FS) Append(
 	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm)
 }
 
-// Stat implements fs.StatFS
+var _ fs.StatFS = (*FS)(nil)
+
 func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -133,7 +139,8 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	return os.Stat(path)
 }
 
-// ReadDir implements fs.ReadDirFS
+var _ fs.ReadDirFS = (*FS)(nil)
+
 func (f *FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
@@ -182,7 +189,8 @@ func (de *dirEntry) Type() fs.Mode              { return de.typ }
 func (de *dirEntry) Info() (fs.FileInfo, error) { return de.info, nil }
 func (de *dirEntry) Path() string               { return "" }
 
-// Remove implements fs.RemoveFS
+var _ fs.RemoveFS = (*FS)(nil)
+
 func (f *FS) Remove(ctx context.Context, name string) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -191,7 +199,8 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 	return os.Remove(path)
 }
 
-// Mkdir implements fs.MkdirFS
+var _ fs.MkdirFS = (*FS)(nil)
+
 func (f *FS) Mkdir(ctx context.Context, name string) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -201,7 +210,8 @@ func (f *FS) Mkdir(ctx context.Context, name string) error {
 	return os.Mkdir(path, perm)
 }
 
-// Rename implements fs.RenameFS
+var _ fs.RenameFS = (*FS)(nil)
+
 func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
 	oldpath, err := f.resolvePath(ctx, oldname)
 	if err != nil {
@@ -214,7 +224,8 @@ func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
 	return os.Rename(oldpath, newpath)
 }
 
-// Truncate implements fs.TruncateFS
+var _ fs.TruncateFS = (*FS)(nil)
+
 func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -223,7 +234,8 @@ func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
 	return os.Truncate(path, size)
 }
 
-// Chtimes implements fs.ChtimesFS
+var _ fs.ChtimesFS = (*FS)(nil)
+
 func (f *FS) Chtimes(
 	ctx context.Context, name string, atime, mtime time.Time,
 ) error {
@@ -234,7 +246,8 @@ func (f *FS) Chtimes(
 	return os.Chtimes(path, atime, mtime)
 }
 
-// Symlink implements fs.SymlinkFS
+var _ fs.SymlinkFS = (*FS)(nil)
+
 func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
 	newpath, err := f.resolvePath(ctx, newname)
 	if err != nil {
@@ -245,7 +258,8 @@ func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
 	return os.Symlink(oldname, newpath)
 }
 
-// ReadLink implements fs.ReadLinkFS
+var _ fs.ReadLinkFS = (*FS)(nil)
+
 func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -254,7 +268,6 @@ func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
 	return os.Readlink(path)
 }
 
-// Lstat implements fs.LstatFS
 func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
@@ -263,7 +276,39 @@ func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
 	return os.Lstat(path)
 }
 
-// Abs implements fs.AbsFS
+var _ fs.LocalizeFS = (*FS)(nil)
+
+func (f *FS) Localize(ctx context.Context, path string) (string, error) {
+	return localizePath(path)
+}
+
+// localizePath converts a Unix-style path to OS-specific format.
+// Handles directory paths (indicated by trailing separator).
+// This function is idempotent - calling it multiple times returns the same
+// result, even though filepath.Localize itself is not idempotent on Windows.
+func localizePath(p string) (string, error) {
+	// If path is already localized (contains OS separator on Windows),
+	// return as-is for idempotency. On Windows, backslashes indicate
+	// the path was already localized.
+	if filepath.Separator == '\\' && strings.ContainsRune(p, '\\') {
+		return p, nil
+	}
+
+	// Check if this is a directory path
+	if fspath.IsDir(p) {
+		// Directory path - localize without trailing slash, then add it back
+		dir := fspath.Dir(p)
+		base, err := filepath.Localize(dir)
+		if err != nil {
+			return "", err
+		}
+		return base + string(filepath.Separator), nil
+	}
+	return filepath.Localize(p)
+}
+
+var _ fs.AbsFS = (*FS)(nil)
+
 func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 	// If already absolute, return as-is
 	if filepath.IsAbs(name) {
@@ -279,7 +324,8 @@ func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// Rel implements fs.RelFS
+var _ fs.RelFS = (*FS)(nil)
+
 func (f *FS) Rel(
 	ctx context.Context, basepath, targpath string,
 ) (string, error) {
@@ -292,33 +338,14 @@ func (f *FS) Rel(
 	return filepath.ToSlash(rel), nil
 }
 
+var _ io.Closer = (*FS)(nil)
+
 // Close removes the temporary directory if this filesystem was created with
 // New(""). If the filesystem was created with a specific root directory,
 // Close does nothing and returns nil.
-//
-// Close implements io.Closer.
 func (f *FS) Close() error {
 	if f.cleanupFn != nil {
 		return f.cleanupFn()
 	}
 	return nil
 }
-
-// Compile-time interface checks
-var (
-	_ fs.FS         = (*FS)(nil)
-	_ fs.CreateFS   = (*FS)(nil)
-	_ fs.AppendFS   = (*FS)(nil)
-	_ fs.RemoveFS   = (*FS)(nil)
-	_ fs.MkdirFS    = (*FS)(nil)
-	_ fs.RenameFS   = (*FS)(nil)
-	_ fs.TruncateFS = (*FS)(nil)
-	_ fs.ChtimesFS  = (*FS)(nil)
-	_ fs.StatFS     = (*FS)(nil)
-	_ fs.ReadDirFS  = (*FS)(nil)
-	_ fs.SymlinkFS  = (*FS)(nil)
-	_ fs.ReadLinkFS = (*FS)(nil)
-	_ fs.AbsFS      = (*FS)(nil)
-	_ fs.RelFS      = (*FS)(nil)
-	_ io.Closer     = (*FS)(nil)
-)

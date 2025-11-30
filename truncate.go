@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"io"
+
+	"lesiw.io/fs/path"
 )
 
 // A TruncateFS is a file system with the Truncate method.
@@ -44,28 +46,35 @@ type TruncateDirFS interface {
 //
 // # Directories
 //
-// A trailing slash (/) indicates a directory. Removes all contents, leaving
-// an empty directory.
+// A trailing slash indicates a directory. Removes all contents, leaving an
+// empty directory.
 //
 // Requires: [TruncateDirFS] || ([RemoveAllFS] && [MkdirFS])
 func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
-	// Check if this is a directory (trailing slash)
-	if len(name) > 0 && name[len(name)-1] == '/' {
-		dirName := name[:len(name)-1]
-		return truncateDirAsTar(ctx, fsys, dirName, size)
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
 	}
 
-	// Try native Truncate first
-	if tfs, ok := fsys.(TruncateFS); ok {
-		err := tfs.Truncate(ctx, name, size)
-		if err == nil || !errors.Is(err, ErrUnsupported) {
-			return err
-		}
-		// Fall through to fallback if ErrUnsupported
+	if path.IsDir(name) {
+		return truncateDirAsTar(ctx, fsys, name, size)
 	}
 
-	// Fallback: read existing content, remove, recreate with truncated content
-	// Read up to 'size' bytes from the existing file
+	tfs, ok := fsys.(TruncateFS)
+	if !ok {
+		return recreateTruncate(ctx, fsys, name, size)
+	}
+
+	err = tfs.Truncate(ctx, name, size)
+	if err == nil || !errors.Is(err, ErrUnsupported) {
+		return err
+	}
+	return recreateTruncate(ctx, fsys, name, size)
+}
+
+func recreateTruncate(
+	ctx context.Context, fsys FS, name string, size int64,
+) error {
 	f, err := Open(ctx, fsys, name)
 	if err != nil {
 		return &PathError{
@@ -91,13 +100,11 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 			Err:  readErr,
 		}
 	}
-	// If file was smaller than size, extend with zeros
 	content = content[:n]
 	if int64(n) < size {
 		content = append(content, make([]byte, size-int64(n))...)
 	}
 
-	// Remove the file
 	if err := Remove(ctx, fsys, name); err != nil {
 		return &PathError{
 			Op:   "truncate",
@@ -106,7 +113,6 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 		}
 	}
 
-	// Create new file with truncated content
 	w, err := Create(ctx, fsys, name)
 	if err != nil {
 		return &PathError{
@@ -128,14 +134,10 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 	return w.Close()
 }
 
-// truncateDirAsTar empties a directory.
-// If fsys implements TruncateDirFS, uses the native TruncateDir
-// implementation.
-// Otherwise, falls back to RemoveAll + Mkdir when available.
-// Returns an error if the directory doesn't exist.
 func truncateDirAsTar(
 	ctx context.Context, fsys FS, dir string, size int64,
 ) error {
+	dir = path.Dir(dir)
 	if size != 0 {
 		return &PathError{
 			Op:   "truncate",
@@ -143,25 +145,28 @@ func truncateDirAsTar(
 			Err:  errors.New("directory truncate requires size 0"),
 		}
 	}
-	// Try native TruncateDir first
-	if tfs, ok := fsys.(TruncateDirFS); ok {
-		err := tfs.TruncateDir(ctx, dir)
-		if err == nil || !errors.Is(err, ErrUnsupported) {
-			return err
-		}
-		// Fall through to fallback if ErrUnsupported
+
+	tfs, ok := fsys.(TruncateDirFS)
+	if !ok {
+		return recreateTruncateDir(ctx, fsys, dir)
 	}
 
-	// Fallback: Check existence, remove contents, recreate
-	// First check if directory exists
+	err := tfs.TruncateDir(ctx, dir)
+	if err == nil || !errors.Is(err, ErrUnsupported) {
+		return err
+	}
+	return recreateTruncateDir(ctx, fsys, dir)
+}
+
+func recreateTruncateDir(
+	ctx context.Context, fsys FS, dir string,
+) error {
 	if sfs, ok := fsys.(StatFS); ok {
 		info, err := sfs.Stat(ctx, dir)
 		if err != nil {
-			// Directory doesn't exist or error - return error
 			return &PathError{Op: "truncate", Path: dir, Err: err}
 		}
 		if !info.IsDir() {
-			// Path exists but is not a directory
 			return &PathError{
 				Op:   "truncate",
 				Path: dir,
@@ -170,18 +175,15 @@ func truncateDirAsTar(
 		}
 	}
 
-	// Directory exists - remove and recreate
 	if _, ok := fsys.(RemoveAllFS); ok {
 		if err := RemoveAll(ctx, fsys, dir); err != nil {
 			return &PathError{Op: "truncate", Path: dir, Err: err}
 		}
 	}
 
-	// Recreate empty directory (use MkdirAll for idempotency)
 	if _, ok := fsys.(MkdirFS); ok {
 		return MkdirAll(ctx, fsys, dir)
 	}
 
-	// Can't recreate - return unsupported
 	return &PathError{Op: "truncate", Path: dir, Err: ErrUnsupported}
 }

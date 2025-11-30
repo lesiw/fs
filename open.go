@@ -5,8 +5,9 @@ import (
 	"context"
 	"errors"
 	"io"
-	"path"
 	"strings"
+
+	"lesiw.io/fs/path"
 )
 
 // An FS is a file system with the Open method.
@@ -44,48 +45,58 @@ type DirFS interface {
 // for path manipulation. Implementations handle OS-specific conversion
 // internally.
 //
-// The returned [io.ReadCloser] must be closed when done.
+// The returned [ReadPathCloser] must be closed when done. The Path() method
+// returns the native filesystem path, or the input path if localization is
+// not supported.
 //
 // # Files
 //
-// Returns an [io.ReadCloser] for reading the file contents.
+// Returns a [ReadPathCloser] for reading the file contents.
 //
 // Requires: [FS]
 //
 // # Directories
 //
-// A trailing slash (/) or a path identified as a directory via [StatFS]
-// returns a tar archive stream of the directory contents.
+// A trailing slash returns a tar archive stream of the directory contents.
+// A path identified as a directory via [StatFS] also returns a tar archive.
 //
 // Requires: [DirFS] || ([FS] && ([ReadDirFS] || [WalkFS]))
-func Open(ctx context.Context, fsys FS, name string) (io.ReadCloser, error) {
-	// Check if name has trailing slash - indicates directory
-	if len(name) > 0 && name[len(name)-1] == '/' {
-		dirName := name[:len(name)-1]
-		return openDirAsTar(ctx, fsys, dirName)
+func Open(ctx context.Context, fsys FS, name string) (ReadPathCloser, error) {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return nil, err
 	}
 
-	// Check if it's a directory via stat
+	if path.IsDir(name) {
+		r, err := openDirAsTar(ctx, fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		return readPathCloser(r, name), nil
+	}
+
 	if sfs, ok := fsys.(StatFS); ok {
 		info, err := sfs.Stat(ctx, name)
 		if err == nil && info.IsDir() {
-			return openDirAsTar(ctx, fsys, name)
+			r, err := openDirAsTar(ctx, fsys, name)
+			if err != nil {
+				return nil, err
+			}
+			return readPathCloser(r, name), nil
 		}
 	}
 
-	// Regular file open
-	return fsys.Open(ctx, name)
+	r, err := fsys.Open(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return readPathCloser(r, name), nil
 }
 
-// openDirAsTar opens a tar stream for reading from dir in fsys.
-// If fsys implements DirFS, uses the native implementation.
-// If the native implementation returns ErrUnsupported, falls back to walking
-// the directory and creating tar manually.
-//
-// The returned reader must be closed when done.
 func openDirAsTar(
 	ctx context.Context, fsys FS, dir string,
 ) (io.ReadCloser, error) {
+	dir = path.Dir(dir)
 	if tfs, ok := fsys.(DirFS); ok {
 		r, err := tfs.OpenDir(ctx, dir)
 		if err != nil && !errors.Is(err, ErrUnsupported) {
@@ -94,17 +105,11 @@ func openDirAsTar(
 		if err == nil {
 			return r, nil
 		}
-		// Fall through to fallback if ErrUnsupported
 	}
-	return openTarFallback(ctx, fsys, dir)
+	return walkDirAsTar(ctx, fsys, dir)
 }
 
-// openTarFallback creates a tar archive by walking the filesystem.
-//
-// The returned ReadCloser must be closed when done reading. The spawned
-// goroutine will terminate when the reader is closed or when the entire
-// tar archive has been read to EOF.
-func openTarFallback(
+func walkDirAsTar(
 	ctx context.Context, fsys FS, dir string,
 ) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()

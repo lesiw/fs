@@ -3,7 +3,8 @@ package fs
 import (
 	"context"
 	"errors"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 // A RemoveFS is a file system with the Remove method.

@@ -3,7 +3,8 @@ package fs
 import (
 	"context"
 	"errors"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 // A MkdirFS is a file system with the Mkdir method.

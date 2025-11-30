@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"io"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 // A CreateFS is a file system with the Create method.
@@ -28,7 +29,9 @@ type CreateFS interface {
 // [MkdirFS], Create automatically creates the parent directories with
 // mode 0755 (or the mode specified via [WithDirMode]).
 //
-// The returned [io.WriteCloser] must be closed when done.
+// The returned [WritePathCloser] must be closed when done. The Path() method
+// returns the native filesystem path, or the input path if localization is
+// not supported.
 //
 // # Files
 //
@@ -39,36 +42,27 @@ type CreateFS interface {
 //
 // # Directories
 //
-// A trailing slash (/) empties the directory (or creates it if it doesn't
-// exist) and returns a tar stream writer for extracting files into it.
-// This is equivalent to Truncate(name, 0) followed by Append(name).
+// A trailing slash empties the directory (or creates it if it doesn't exist)
+// and returns a tar stream writer for extracting files into it. This is
+// equivalent to Truncate(name, 0) followed by Append(name).
 //
 // Requires: See [Truncate] and [Append] requirements
 func Create(
 	ctx context.Context, fsys FS, name string,
-) (io.WriteCloser, error) {
-	// Check if this is a directory path (trailing slash)
-	if len(name) > 0 && name[len(name)-1] == '/' {
-		dirName := name[:len(name)-1]
-
-		// Ensure directory exists if MkdirFS is supported
-		// (otherwise, directories are virtual and created by tar extraction)
-		if _, ok := fsys.(MkdirFS); ok {
-			if err := MkdirAll(ctx, fsys, dirName); err != nil {
-				return nil, err
-			}
-
-			// Truncate to empty the directory
-			if err := Truncate(ctx, fsys, name, 0); err != nil {
-				return nil, err
-			}
-		}
-
-		// Return append writer (tar extraction will create files/dirs)
-		return Append(ctx, fsys, name)
+) (WritePathCloser, error) {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return nil, err
 	}
 
-	// Check if filesystem supports Create
+	if path.IsDir(name) {
+		w, err := createDirAsTar(ctx, fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		return writePathCloser(w, name), nil
+	}
+
 	cfs, ok := fsys.(CreateFS)
 	if !ok {
 		return nil, &PathError{
@@ -78,31 +72,35 @@ func Create(
 		}
 	}
 
+retry:
 	f, err := cfs.Create(ctx, name)
 	if err == nil {
-		return f, nil
+		return writePathCloser(f, name), nil
 	}
-
-	// If the error is ErrNotExist, try to create parent directories
-	if !errors.Is(err, ErrNotExist) {
-		return nil, err
+	if errors.Is(err, ErrNotExist) {
+		dir := path.Dir(name)
+		if dir == "." || dir == name {
+			return nil, err
+		}
+		if merr := MkdirAll(ctx, fsys, dir); merr != nil {
+			return nil, errors.Join(err, merr)
+		}
+		goto retry
 	}
+	return writePathCloser(f, name), nil
+}
 
-	// Check if filesystem supports mkdir
-	if _, ok := fsys.(MkdirFS); !ok {
-		return nil, err // Return original error if mkdir not supported
+func createDirAsTar(
+	ctx context.Context, fsys FS, dir string,
+) (io.WriteCloser, error) {
+	dir = path.Dir(dir)
+	if _, ok := fsys.(MkdirFS); ok {
+		if err := MkdirAll(ctx, fsys, dir); err != nil {
+			return nil, err
+		}
+		if err := Truncate(ctx, fsys, path.Join(dir, ""), 0); err != nil {
+			return nil, err
+		}
 	}
-
-	// Create parent directory
-	dir := path.Dir(name)
-	if dir == "." || dir == name {
-		return nil, err // No parent to create
-	}
-
-	if mkdirErr := MkdirAll(ctx, fsys, dir); mkdirErr != nil {
-		return nil, err // Return original error, not mkdir error
-	}
-
-	// Try again after creating parent
-	return cfs.Create(ctx, name)
+	return Append(ctx, fsys, path.Join(dir, ""))
 }

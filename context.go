@@ -2,7 +2,8 @@ package fs
 
 import (
 	"context"
-	"path"
+
+	"lesiw.io/fs/path"
 )
 
 type contextKey int
