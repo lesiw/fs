@@ -21,6 +21,10 @@ type ChtimesFS interface {
 func Chtimes(
 	ctx context.Context, fsys FS, name string, atime, mtime time.Time,
 ) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	if cfs, ok := fsys.(ChtimesFS); ok {
 		err := cfs.Chtimes(ctx, name, atime, mtime)
 		if !errors.Is(err, ErrUnsupported) {

@@ -8,58 +8,67 @@ import (
 	"lesiw.io/fs"
 )
 
-// TestRemove tests removing files and empty directories.
 func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
 	rfs, ok := fsys.(fs.RemoveFS)
 	if !ok {
 		t.Skip("RemoveFS not supported")
 	}
 
-	// Test removing a file
-	fileData := []byte("data")
-	fileName := "test_remove_file.txt"
-	if err := fs.WriteFile(ctx, fsys, fileName, fileData); err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Skip("write operations not supported")
+	t.Run("RemoveFile", func(t *testing.T) {
+		fileData := []byte("data")
+		fileName := "test_remove_file.txt"
+		if err := fs.WriteFile(ctx, fsys, fileName, fileData); err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("write operations not supported")
+			}
+			t.Fatalf("write file: %v", err)
 		}
-		t.Fatalf("write file: %v", err)
-	}
+		cleanup(ctx, t, fsys, fileName)
 
-	if err := rfs.Remove(ctx, fileName); err != nil {
-		t.Fatalf("remove file: %v", err)
-	}
+		if err := rfs.Remove(ctx, fileName); err != nil {
+			t.Fatalf("remove file: %v", err)
+		}
 
-	// Verify file is gone
-	_, statErr := fs.Stat(ctx, fsys, fileName)
-	if statErr == nil {
-		t.Errorf("stat after remove: file still exists")
-	}
+		_, statErr := fs.Stat(ctx, fsys, fileName)
+		if statErr == nil {
+			t.Errorf("stat after remove: file still exists")
+		}
+	})
 
-	// Test removing empty directory (skip if mkdir not supported)
-	dirName := "test_remove_dir"
-	mkdirErr := fs.Mkdir(ctx, fsys, dirName)
-	if !errors.Is(mkdirErr, fs.ErrUnsupported) {
+	t.Run("RemoveDir", func(t *testing.T) {
+		dirName := "test_remove_dir"
+		mkdirErr := fs.Mkdir(ctx, fsys, dirName)
+		if errors.Is(mkdirErr, fs.ErrUnsupported) {
+			t.Skip("MkdirFS not supported")
+		}
 		if mkdirErr != nil {
 			t.Fatalf("mkdir: %v", mkdirErr)
 		}
+		cleanup(ctx, t, fsys, dirName)
 
 		if err := rfs.Remove(ctx, dirName); err != nil {
 			t.Fatalf("remove dir: %v", err)
 		}
 
-		// Verify directory is gone
-		_, statErr = fs.Stat(ctx, fsys, dirName)
+		_, statErr := fs.Stat(ctx, fsys, dirName)
 		if statErr == nil {
 			t.Errorf("stat after remove: directory still exists")
 		}
+	})
 
-		// Test removing non-empty directory should fail
+	t.Run("RemoveNonempty", func(t *testing.T) {
+		mkdirErr := fs.Mkdir(ctx, fsys, "")
+		if errors.Is(mkdirErr, fs.ErrUnsupported) {
+			t.Skip("MkdirFS not supported")
+		}
+
+		fileData := []byte("data")
 		nonemptyDir := "test_remove_nonempty"
 		if err := fs.Mkdir(ctx, fsys, nonemptyDir); err != nil {
 			t.Fatalf("mkdir: %v", err)
 		}
+		cleanup(ctx, t, fsys, nonemptyDir)
+
 		fileInDir := nonemptyDir + "/file.txt"
 		writeErr := fs.WriteFile(ctx, fsys, fileInDir, fileData)
 		if writeErr != nil {
@@ -70,25 +79,17 @@ func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 		if removeErr == nil {
 			t.Errorf("remove non-empty dir: expected error, got nil")
 		}
-
-		// Clean up
-		if err := fs.RemoveAll(ctx, fsys, nonemptyDir); err != nil {
-			t.Fatalf("cleanup: %v", err)
-		}
-	}
+	})
 }
 
-// TestRemoveAll tests recursive removal.
-func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
-	// Check if RemoveAll is supported (either native or via fallback)
+func testRemoveAll(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	_, hasRemoveAll := fsys.(fs.RemoveAllFS)
 	_, hasRemove := fsys.(fs.RemoveFS)
 	_, hasStat := fsys.(fs.StatFS)
 	_, hasReadDir := fsys.(fs.ReadDirFS)
 
-	// Skip if neither native RemoveAllFS nor fallback requirements exist
 	if !hasRemoveAll && (!hasRemove || !hasStat || !hasReadDir) {
 		t.Skip(
 			"RemoveAll not supported " +
@@ -96,7 +97,6 @@ func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 		)
 	}
 
-	// Create nested structure
 	testDir := "test_removeall"
 	mkdirErr := fs.MkdirAll(ctx, fsys, testDir+"/a/b/c")
 	if errors.Is(mkdirErr, fs.ErrUnsupported) {
@@ -105,6 +105,8 @@ func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if mkdirErr != nil {
 		t.Fatalf("mkdirall: %v", mkdirErr)
 	}
+	cleanup(ctx, t, fsys, testDir)
+
 	file1Data := []byte("one")
 	file1 := testDir + "/file1.txt"
 	if err := fs.WriteFile(ctx, fsys, file1, file1Data); err != nil {
@@ -124,18 +126,15 @@ func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 		t.Fatalf("write file3: %v", err)
 	}
 
-	// Remove entire tree
 	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
 		t.Fatalf("removeall: %v", err)
 	}
 
-	// Verify it's gone
 	_, statErr := fs.Stat(ctx, fsys, testDir)
 	if statErr == nil {
 		t.Errorf("stat after removeall: directory still exists")
 	}
 
-	// Test RemoveAll on non-existent path should succeed
 	nonexistentPath := "test_removeall_nonexistent"
 	if err := fs.RemoveAll(ctx, fsys, nonexistentPath); err != nil {
 		t.Errorf("removeall nonexistent: %v", err)

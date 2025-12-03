@@ -6,18 +6,32 @@ import (
 	"context"
 	"errors"
 	"io"
-	"path"
 	"slices"
 	"testing"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
+
+func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Run("OpenEmptyDir", func(t *testing.T) {
+		testOpenEmptyDir(ctx, t, fsys)
+	})
+
+	t.Run("OpenDir", func(t *testing.T) {
+		testOpenDir(ctx, t, fsys)
+	})
+
+	t.Run("CreateDir", func(t *testing.T) {
+		testCreateDir(ctx, t, fsys)
+	})
+}
 
 // testOpenEmptyDir tests reading an empty directory as a tar stream.
 // This requires MkdirFS support to create the empty directory.
-func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testOpenEmptyDir(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	if _, ok := fsys.(fs.StatFS); !ok {
 		t.Skip("StatFS not supported - cannot detect directories")
 	}
@@ -30,6 +44,7 @@ func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("MkdirAll(): %v", err)
 	}
+	cleanup(ctx, t, fsys, testDir)
 
 	file1Data := []byte("file one")
 	file1 := testDir + "/file1.txt"
@@ -86,7 +101,15 @@ func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	for name, expectedData := range expectedFiles {
-		data, found := foundFiles[name]
+		var data []byte
+		var found bool
+		for foundPath, foundData := range foundFiles {
+			if pathsEqual([]string{foundPath}, []string{name}) {
+				data = foundData
+				found = true
+				break
+			}
+		}
 		if !found {
 			t.Errorf("tar archive missing file: %q", name)
 			continue
@@ -99,20 +122,15 @@ func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	}
 
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", testDir, err)
-	}
 }
 
 // testOpenDir tests reading a directory created by files.
 // This works on all filesystems, including those with virtual directories.
 func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
 	// Create files in nested directories
 	// (directories created explicitly or implicitly depending on filesystem)
 	testDir := "test_opendir_files"
+
 	file1Data := []byte("file one")
 	file1 := testDir + "/file1.txt"
 	if err := fs.WriteFile(ctx, fsys, file1, file1Data); err != nil {
@@ -121,6 +139,7 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("WriteFile(%q): %v", file1, err)
 	}
+	cleanup(ctx, t, fsys, testDir)
 
 	file2Data := []byte("file two")
 	file2 := testDir + "/subdir/file2.txt"
@@ -168,7 +187,15 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	for name, expectedData := range expectedFiles {
-		data, found := foundFiles[name]
+		var data []byte
+		var found bool
+		for foundPath, foundData := range foundFiles {
+			if pathsEqual([]string{foundPath}, []string{name}) {
+				data = foundData
+				found = true
+				break
+			}
+		}
 		if !found {
 			t.Errorf("tar archive missing file: %q", name)
 			continue
@@ -181,16 +208,12 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	}
 
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", testDir, err)
-	}
 }
 
 // TestCreateDir tests writing a tar stream to create a directory.
-func testCreateDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testCreateDir(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	if _, ok := fsys.(fs.CreateFS); !ok {
 		t.Skip("CreateFS not supported")
 	}
@@ -243,10 +266,12 @@ func testCreateDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	// Extract tar to filesystem using trailing slash
 	testDir := "test_createdir"
+
 	tarWriter, err := fs.Create(ctx, fsys, testDir+"/")
 	if err != nil {
 		t.Fatalf("Create(%q): %v", testDir+"/", err)
 	}
+	cleanup(ctx, t, fsys, testDir)
 
 	if _, err := io.Copy(tarWriter, &buf); err != nil {
 		tarWriter.Close()
@@ -317,10 +342,5 @@ func testCreateDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 			"Walk() found files = %v, want %v",
 			foundFiles, expectedNames,
 		)
-	}
-
-	// Clean up
-	if err := fs.RemoveAll(ctx, fsys, testDir); err != nil {
-		t.Fatalf("RemoveAll(%q): %v", testDir, err)
 	}
 }

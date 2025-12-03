@@ -11,12 +11,26 @@ import (
 	"lesiw.io/fs"
 )
 
+func testStress(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Run("MixedOperations", func(t *testing.T) {
+		testMixedOperations(ctx, t, fsys)
+	})
+
+	t.Run("ConcurrentReads", func(t *testing.T) {
+		testConcurrentReads(ctx, t, fsys)
+	})
+
+	t.Run("ModifyAndRead", func(t *testing.T) {
+		testModifyAndRead(ctx, t, fsys)
+	})
+}
+
 // TestMixedOperations performs a stress test that combines multiple filesystem
 // operations in realistic patterns. This tests that implementations correctly
 // handle complex workflows.
-func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testMixedOperations(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	// Create a directory structure with files at various levels
 	baseDir := "stress_test"
 	mkdirErr := fs.MkdirAll(ctx, fsys, baseDir+"/a/b/c")
@@ -32,7 +46,7 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	// Write files at various levels
-	files := map[string][]byte{
+	testFiles := map[string][]byte{
 		baseDir + "/root.txt":         []byte("root level"),
 		baseDir + "/a/level1.txt":     []byte("level 1"),
 		baseDir + "/a/b/level2.txt":   []byte("level 2"),
@@ -40,7 +54,7 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 		baseDir + "/d/other.txt":      []byte("other branch"),
 	}
 
-	for path, content := range files {
+	for path, content := range testFiles {
 		if err := fs.WriteFile(ctx, fsys, path, content); err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")
@@ -64,7 +78,7 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 				t.Errorf("ReadFile(%q): %v", entry.Path(), readErr)
 				continue
 			}
-			expected, ok := files[entry.Path()]
+			expected, ok := testFiles[entry.Path()]
 			if !ok {
 				t.Errorf("unexpected file in Walk: %q", entry.Path())
 				continue
@@ -78,8 +92,8 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	}
 
-	if walkCount != len(files) {
-		t.Errorf("Walk() found %d files, want %d", walkCount, len(files))
+	if walkCount != len(testFiles) {
+		t.Errorf("Walk() found %d files, want %d", walkCount, len(testFiles))
 	}
 
 	// Rename a file and verify
@@ -100,10 +114,10 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 			data, err := fs.ReadFile(ctx, fsys, newPath)
 			if err != nil {
 				t.Errorf("ReadFile(%q) after rename: %v", newPath, err)
-			} else if !bytes.Equal(data, files[oldPath]) {
+			} else if !bytes.Equal(data, testFiles[oldPath]) {
 				t.Errorf(
 					"renamed file content = %q, want %q",
-					data, files[oldPath],
+					data, testFiles[oldPath],
 				)
 			}
 		}
@@ -136,9 +150,9 @@ func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 // TestConcurrentReads tests that multiple concurrent read operations work
 // correctly. This is a basic concurrency test that doesn't use goroutines
 // but does test that file handles don't interfere with each other.
-func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testConcurrentReads(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	// Create test files
 	const numFiles = 5
 	testDir := "concurrent_reads"
@@ -157,11 +171,11 @@ func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 		reader  io.ReadCloser
 	}
 
-	files := make([]fileInfo, numFiles)
+	testFiles := make([]fileInfo, numFiles)
 	for i := 0; i < numFiles; i++ {
 		path := fmt.Sprintf("%s/file%d.txt", testDir, i)
 		content := []byte(fmt.Sprintf("content %d", i))
-		files[i] = fileInfo{path: path, content: content}
+		testFiles[i] = fileInfo{path: path, content: content}
 
 		if err := fs.WriteFile(ctx, fsys, path, content); err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
@@ -172,38 +186,38 @@ func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	// Open all files simultaneously (without closing)
-	for i := range files {
-		r, err := fs.Open(ctx, fsys, files[i].path)
+	for i := range testFiles {
+		r, err := fs.Open(ctx, fsys, testFiles[i].path)
 		if err != nil {
-			t.Fatalf("Open(%q): %v", files[i].path, err)
+			t.Fatalf("Open(%q): %v", testFiles[i].path, err)
 		}
-		files[i].reader = r
+		testFiles[i].reader = r
 	}
 
 	// Read from all files
-	for i := range files {
-		data := make([]byte, len(files[i].content))
-		n, readErr := files[i].reader.Read(data)
+	for i := range testFiles {
+		data := make([]byte, len(testFiles[i].content))
+		n, readErr := testFiles[i].reader.Read(data)
 		if readErr != nil {
-			t.Errorf("Read() from %q: %v", files[i].path, readErr)
+			t.Errorf("Read() from %q: %v", testFiles[i].path, readErr)
 		}
-		if n != len(files[i].content) {
+		if n != len(testFiles[i].content) {
 			t.Errorf(
 				"Read() from %q = %d bytes, want %d",
-				files[i].path, n, len(files[i].content),
+				testFiles[i].path, n, len(testFiles[i].content),
 			)
 		}
-		if !bytes.Equal(data, files[i].content) {
+		if !bytes.Equal(data, testFiles[i].content) {
 			t.Errorf(
 				"Read() from %q = %q, want %q",
-				files[i].path, data, files[i].content,
+				testFiles[i].path, data, testFiles[i].content,
 			)
 		}
 	}
 
 	// Close all readers
-	for i := range files {
-		if err := files[i].reader.Close(); err != nil {
+	for i := range testFiles {
+		if err := testFiles[i].reader.Close(); err != nil {
 			t.Errorf("Close() reader %d: %v", i, err)
 		}
 	}
@@ -211,9 +225,9 @@ func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 // TestModifyAndRead tests a realistic workflow of creating, modifying, and
 // reading files in various ways.
-func testModifyAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testModifyAndRead(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	testDir := "modify_test"
 	mkdirErr := fs.Mkdir(ctx, fsys, testDir)
 	if errors.Is(mkdirErr, fs.ErrUnsupported) {

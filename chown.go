@@ -20,6 +20,10 @@ type ChownFS interface {
 //
 // Requires: [ChownFS]
 func Chown(ctx context.Context, fsys FS, name string, uid, gid int) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	if cfs, ok := fsys.(ChownFS); ok {
 		err := cfs.Chown(ctx, name, uid, gid)
 		if !errors.Is(err, ErrUnsupported) {

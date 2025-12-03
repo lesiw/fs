@@ -9,9 +9,19 @@ import (
 	"lesiw.io/fs"
 )
 
-func testTempFile(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
+func testTemp(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Run("TempFile", func(t *testing.T) {
+		testTempFile(ctx, t, fsys)
+	})
 
+	t.Run("TempDir", func(t *testing.T) {
+		testTempDir(ctx, t, fsys)
+	})
+}
+
+func testTempFile(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	t.Run("CreateAndWrite", func(t *testing.T) {
 		prefix := "test_tempfile"
 		w, err := fs.Temp(ctx, fsys, prefix)
@@ -65,7 +75,7 @@ func testTempFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 			t.Fatalf("Close w2 err: %v", err)
 		}
 
-		if w1.Path() == w2.Path() {
+		if pathsEqual([]string{w1.Path()}, []string{w2.Path()}) {
 			t.Errorf(
 				"Temp(%q) created duplicate names: %q",
 				prefix, w1.Path(),
@@ -75,8 +85,6 @@ func testTempFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
 	t.Run("CreateAndUse", func(t *testing.T) {
 		prefix := "test_tempdir/"
 		w, err := fs.Temp(ctx, fsys, prefix)
@@ -108,7 +116,7 @@ func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 			if errors.Is(writeErr, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")
 			}
-			t.Fatalf("WriteFile err: %v", writeErr)
+			t.Fatalf("WriteFile(%q) err: %v", testFile, writeErr)
 		}
 
 		info, statErr := fs.Stat(ctx, fsys, tempDir)
@@ -121,7 +129,7 @@ func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 		data, readErr := fs.ReadFile(ctx, fsys, testFile)
 		if readErr != nil {
-			t.Fatalf("ReadFile err: %v", readErr)
+			t.Fatalf("ReadFile(%q) err: %v", testFile, readErr)
 		}
 		if string(data) != string(testData) {
 			t.Errorf("ReadFile = %q, want %q", data, testData)
@@ -145,7 +153,7 @@ func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		cleanup(ctx, t, fsys, w2.Path())
 
-		if w1.Path() == w2.Path() {
+		if pathsEqual([]string{w1.Path()}, []string{w2.Path()}) {
 			t.Errorf(
 				"Temp(%q) created duplicate names: %q",
 				prefix, w1.Path(),

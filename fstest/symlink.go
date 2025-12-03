@@ -8,12 +8,24 @@ import (
 	"lesiw.io/fs"
 )
 
-// TestSymlink tests creating and following symbolic links.
 func testSymlink(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Run("SymlinkFile", func(t *testing.T) {
+		testSymlinkFile(ctx, t, fsys)
+	})
+
+	t.Run("SymlinkDir", func(t *testing.T) {
+		testSymlinkDir(ctx, t, fsys)
+	})
+
+	t.Run("ReadLink", func(t *testing.T) {
+		testReadlink(ctx, t, fsys)
+	})
+}
+
+func testSymlinkFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Helper()
 
-	// Create target file
-	targetFile := "test_symlink_target.txt"
+	targetFile := "test_symlink_target_file.txt"
 	testData := []byte("symlink target content")
 	if err := fs.WriteFile(ctx, fsys, targetFile, testData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
@@ -21,31 +33,19 @@ func testSymlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("WriteFile(%q): %v", targetFile, err)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, targetFile); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", targetFile, err)
-		}
-	})
+	cleanup(ctx, t, fsys, targetFile)
 
-	// Create symlink
-	linkName := "test_symlink_link.txt"
+	linkName := "test_symlink_link_file.txt"
 	err := fs.Symlink(ctx, fsys, targetFile, linkName)
 
-	// ErrUnsupported is acceptable (capability not implemented)
 	if err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
-			t.Logf("Symlink not supported: %v", err)
-			return
+			t.Skip("Symlink not supported")
 		}
 		t.Fatalf("Symlink(%q, %q): %v", targetFile, linkName, err)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, linkName); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", linkName, err)
-		}
-	})
+	cleanup(ctx, t, fsys, linkName)
 
-	// Read through symlink
 	data, readErr := fs.ReadFile(ctx, fsys, linkName)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) through symlink: %v", linkName, readErr)
@@ -57,34 +57,31 @@ func testSymlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 			linkName, data, testData,
 		)
 	}
+}
 
-	// Test symlink to directory
-	targetDir := "test_symlink_dir"
+func testSymlinkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Helper()
+
+	targetDir := "test_symlink_target_dir"
 	mkdirErr := fs.Mkdir(ctx, fsys, targetDir)
 	if errors.Is(mkdirErr, fs.ErrUnsupported) {
-		t.Logf("MkdirFS not supported, skipping directory symlink test")
-		return
+		t.Skip("MkdirFS not supported")
 	}
 	if mkdirErr != nil {
 		t.Fatalf("Mkdir(%q): %v", targetDir, mkdirErr)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, targetDir); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", targetDir, err)
-		}
-	})
+	cleanup(ctx, t, fsys, targetDir)
 
-	dirLink := "test_symlink_dirlink"
-	if err := fs.Symlink(ctx, fsys, targetDir, dirLink); err != nil {
+	dirLink := "test_symlink_link_dir"
+	err := fs.Symlink(ctx, fsys, targetDir, dirLink)
+	if err != nil {
+		if errors.Is(err, fs.ErrUnsupported) {
+			t.Skip("Symlink not supported")
+		}
 		t.Fatalf("Symlink(%q, %q): %v", targetDir, dirLink, err)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, dirLink); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", dirLink, err)
-		}
-	})
+	cleanup(ctx, t, fsys, dirLink)
 
-	// Verify directory symlink
 	info, statErr := fs.Stat(ctx, fsys, dirLink)
 	if statErr != nil {
 		t.Fatalf("Stat(%q): %v", dirLink, statErr)
@@ -98,11 +95,9 @@ func testSymlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-// TestReadlink tests reading symbolic link targets.
 func testReadlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Helper()
 
-	// Create target
 	targetFile := "test_readlink_target.txt"
 	testData := []byte("target")
 	if err := fs.WriteFile(ctx, fsys, targetFile, testData); err != nil {
@@ -111,44 +106,30 @@ func testReadlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("WriteFile(%q): %v", targetFile, err)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, targetFile); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", targetFile, err)
-		}
-	})
+	cleanup(ctx, t, fsys, targetFile)
 
-	// Create symlink (need to check if Symlink supported first)
 	linkName := "test_readlink_link.txt"
 	symlinkErr := fs.Symlink(ctx, fsys, targetFile, linkName)
 	if symlinkErr != nil {
 		if errors.Is(symlinkErr, fs.ErrUnsupported) {
-			t.Logf(
-				"Symlink not supported (required for Readlink test): %v",
-				symlinkErr,
-			)
-			return
+			t.Skip("Symlink not supported (required for Readlink test)")
 		}
 		t.Fatalf("Symlink(%q, %q): %v", targetFile, linkName, symlinkErr)
 	}
-	t.Cleanup(func() {
-		if err := fs.Remove(ctx, fsys, linkName); err != nil {
-			t.Errorf("Cleanup: Remove(%q): %v", linkName, err)
-		}
-	})
+	cleanup(ctx, t, fsys, linkName)
 
-	// Read symlink target
 	target, err := fs.ReadLink(ctx, fsys, linkName)
 
-	// ErrUnsupported is acceptable (capability not implemented)
 	if err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
-			t.Logf("Readlink not supported: %v", err)
-			return
+			t.Skip("Readlink not supported")
 		}
 		t.Fatalf("Readlink(%q): %v", linkName, err)
 	}
 
 	if target != targetFile {
-		t.Errorf("Readlink(%q) = %q, want %q", linkName, target, targetFile)
+		t.Errorf(
+			"Readlink(%q) = %q, want %q", linkName, target, targetFile,
+		)
 	}
 }

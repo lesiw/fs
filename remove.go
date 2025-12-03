@@ -24,6 +24,10 @@ type RemoveFS interface {
 //
 // Requires: [RemoveFS]
 func Remove(ctx context.Context, fsys FS, name string) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	if rfs, ok := fsys.(RemoveFS); ok {
 		if err := rfs.Remove(ctx, name); !errors.Is(err, ErrUnsupported) {
 			return newPathError("remove", name, err)
@@ -49,6 +53,10 @@ type RemoveAllFS interface {
 // Requires: [RemoveAllFS] ||
 // ([RemoveFS] && [StatFS] && ([ReadDirFS] || [WalkFS]))
 func RemoveAll(ctx context.Context, fsys FS, name string) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	// Check for efficient RemoveAll implementation first
 	if rafs, ok := fsys.(RemoveAllFS); ok {
 		err := rafs.RemoveAll(ctx, name)
@@ -75,7 +83,7 @@ func RemoveAll(ctx context.Context, fsys FS, name string) error {
 	}
 
 	// Try to remove it directly first
-	err := rfs.Remove(ctx, name)
+	err = rfs.Remove(ctx, name)
 	if err == nil || errors.Is(err, ErrNotExist) {
 		return nil
 	}

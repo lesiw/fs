@@ -13,7 +13,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	iofs "io/fs"
 	"iter"
 	"path"
 	"strings"
@@ -54,16 +53,9 @@ func New(
 	}, nil
 }
 
-// Open implements fs.FS
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
-	if !iofs.ValidPath(name) {
-		return nil, &fs.PathError{
-			Op:   "open",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
-	}
+var _ fs.FS = (*FS)(nil)
 
+func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	obj, err := f.client.GetObject(
 		ctx, f.bucket, name, minio.GetObjectOptions{},
 	)
@@ -78,16 +70,9 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
-// Create implements fs.CreateFS
-func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
-	if !iofs.ValidPath(name) {
-		return nil, &fs.PathError{
-			Op:   "create",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
-	}
+var _ fs.CreateFS = (*FS)(nil)
 
+func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	return &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -97,16 +82,9 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	}, nil
 }
 
-// Append implements fs.AppendFS
-func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
-	if !iofs.ValidPath(name) {
-		return nil, &fs.PathError{
-			Op:   "append",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
-	}
+var _ fs.AppendFS = (*FS)(nil)
 
+func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	wc := &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -176,16 +154,9 @@ func (w *s3WriteCloser) Close() error {
 	return err
 }
 
-// Stat implements fs.StatFS
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
-	if !iofs.ValidPath(name) {
-		return nil, &fs.PathError{
-			Op:   "stat",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
-	}
+var _ fs.StatFS = (*FS)(nil)
 
+func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	info, err := f.client.StatObject(
 		ctx, f.bucket, name, minio.StatObjectOptions{},
 	)
@@ -247,20 +218,12 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	}, nil
 }
 
-// ReadDir implements fs.ReadDirFS
+var _ fs.ReadDirFS = (*FS)(nil)
+
 func (f *FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
-		if !iofs.ValidPath(name) {
-			yield(nil, &fs.PathError{
-				Op:   "readdir",
-				Path: name,
-				Err:  fs.ErrInvalid,
-			})
-			return
-		}
-
 		prefix := name
 		if prefix == "." {
 			prefix = ""
@@ -306,16 +269,9 @@ func (f *FS) ReadDir(
 	}
 }
 
-// Remove implements fs.RemoveFS
-func (f *FS) Remove(ctx context.Context, name string) error {
-	if !iofs.ValidPath(name) {
-		return &fs.PathError{
-			Op:   "remove",
-			Path: name,
-			Err:  fs.ErrInvalid,
-		}
-	}
+var _ fs.RemoveFS = (*FS)(nil)
 
+func (f *FS) Remove(ctx context.Context, name string) error {
 	// Check if this is a virtual directory with children
 	info, statErr := f.Stat(ctx, name)
 	if statErr == nil && info.IsDir() {
@@ -354,7 +310,15 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 	return nil
 }
 
-// Abs implements fs.AbsFS
+var _ fs.LocalizeFS = (*FS)(nil)
+
+func (f *FS) Localize(ctx context.Context, name string) (string, error) {
+	// MinIO doesn't accept "./" prefix in paths
+	return strings.TrimPrefix(name, "./"), nil
+}
+
+var _ fs.AbsFS = (*FS)(nil)
+
 func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 	// If already an s3:// URL, return as-is
 	if strings.HasPrefix(name, "s3://") {
@@ -378,14 +342,3 @@ func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 	// Relative path - prepend /
 	return fmt.Sprintf("s3://%s/%s", f.bucket, cleanPath), nil
 }
-
-// Compile-time interface checks
-var (
-	_ fs.FS        = (*FS)(nil)
-	_ fs.CreateFS  = (*FS)(nil)
-	_ fs.AppendFS  = (*FS)(nil)
-	_ fs.StatFS    = (*FS)(nil)
-	_ fs.ReadDirFS = (*FS)(nil)
-	_ fs.RemoveFS  = (*FS)(nil)
-	_ fs.AbsFS     = (*FS)(nil)
-)

@@ -37,10 +37,11 @@ func TestSSHFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SSH filesystem: %v", err)
 	}
-	defer fsys.Close()
+	t.Cleanup(func() { _ = fsys.Close() })
 
-	// atmoz/sftp server restricts users to their home directory
-	// Don't need a prefix - already in /home/testuser
+	// linuxserver/openssh-server puts files in /config which is the
+	// user's home directory. Use a subdirectory for testing.
+	fsys.SetPrefix("testdir")
 
 	ctx := t.Context()
 

@@ -37,7 +37,7 @@ func TestSFTPFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SFTP filesystem: %v", err)
 	}
-	defer fsys.Close()
+	t.Cleanup(func() { _ = fsys.Close() })
 
 	// atmoz/sftp server chroots users to /home/testuser
 	// The "upload" directory is relative to the chroot

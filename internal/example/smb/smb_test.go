@@ -35,7 +35,7 @@ func TestSMBFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SMB filesystem: %v", err)
 	}
-	defer fsys.Close()
+	t.Cleanup(func() { _ = fsys.Close() })
 
 	ctx := t.Context()
 

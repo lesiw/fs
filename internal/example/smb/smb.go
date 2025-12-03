@@ -170,13 +170,18 @@ func (f *FS) ReadDir(
 			name = "."
 		}
 
-		entries, err := f.share.ReadDir(f.fullPath(ctx, name))
+		fullPath := f.fullPath(ctx, name)
+		entries, err := f.share.ReadDir(fullPath)
 		if err != nil {
 			yield(nil, convertError("readdir", name, err))
 			return
 		}
 
 		for _, entry := range entries {
+			// Skip .deleted directory used by SMB for soft deletes
+			if entry.Name() == ".deleted" {
+				continue
+			}
 			if !yield(&dirEntry{info: entry}, nil) {
 				return
 			}
@@ -214,7 +219,50 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 		}
 	}
 
-	if err := f.share.Remove(f.fullPath(ctx, name)); err != nil {
+	fullPath := f.fullPath(ctx, name)
+	if err := f.share.Remove(fullPath); err != nil {
+		return convertError("remove", name, err)
+	}
+
+	return nil
+}
+
+// RemoveAll implements fs.RemoveAllFS to work around go-smb2 bugs where
+// Stat() and Remove() hang on directories in certain states.
+func (f *FS) RemoveAll(ctx context.Context, name string) error {
+	if name == "" {
+		return &fs.PathError{
+			Op:   "remove",
+			Path: name,
+			Err:  fs.ErrInvalid,
+		}
+	}
+
+	fullPath := f.fullPath(ctx, name)
+
+	// Try to read as directory first - if it fails, try to remove as file
+	for entry, readErr := range f.ReadDir(ctx, name) {
+		if readErr != nil {
+			// Not a directory or doesn't exist - try to remove as file
+			if err := f.share.Remove(fullPath); err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					return nil // Already gone
+				}
+				return convertError("remove", name, err)
+			}
+			return nil
+		}
+		childName := path.Join(name, entry.Name())
+		if err := f.RemoveAll(ctx, childName); err != nil {
+			return err
+		}
+	}
+
+	// Remove the now-empty directory (or empty directory from the start)
+	if err := f.share.Remove(fullPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil // Already gone
+		}
 		return convertError("remove", name, err)
 	}
 

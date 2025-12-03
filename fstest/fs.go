@@ -2,34 +2,45 @@ package fstest
 
 import (
 	"context"
-	"fmt"
+	"slices"
 	"testing"
+	"time"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
+
+// File describes an expected file for testing.
+type File struct {
+	Path    string    // file or directory path
+	Data    []byte    // file content (empty for directories)
+	Mode    fs.Mode   // optional file mode for validation
+	ModTime time.Time // optional modification time for validation
+}
 
 // TestFSOption configures TestFS behavior via functional options.
 type TestFSOption func(*testFSOpts)
 
 // testFSOpts holds configuration for TestFS.
-//
-// This struct can be extended in the future with additional options like:
-//   - expectedContent map[string]string for validating file contents
-//   - expectedInfo map[string]ExpectedFileInfo for metadata validation
-//   - skipTests []string to skip specific test categories
-//   - etc.
 type testFSOpts struct {
-	expectedFiles []string
+	expectedFiles []File
 }
 
 // WithFiles specifies files that must exist in the filesystem.
-// When provided, TestFS runs in read-only mode and validates the
-// expected files exist and are readable, then skips tests that
-// require write operations.
+// When provided, TestFS validates these files exist on read-only filesystems.
 //
-// This enables testing read-only filesystems where files are
-// pre-populated externally.
-func WithFiles(files ...string) TestFSOption {
+// For writable filesystems (implementing CreateFS), WithFiles is ignored and
+// tests create their own files. For read-only filesystems, WithFiles is
+// required for any test that needs files, otherwise tests will fail.
+//
+// Example:
+//
+//	fstest.TestFS(ctx, t, readOnlyFS,
+//	    fstest.WithFiles(
+//	        fstest.File{Path: "data/file.txt", Data: []byte("content")},
+//	        fstest.File{Path: "data/subdir"},
+//	    ))
+func WithFiles(files ...File) TestFSOption {
 	return func(opts *testFSOpts) {
 		opts.expectedFiles = files
 	}
@@ -38,10 +49,10 @@ func WithFiles(files ...string) TestFSOption {
 // TestFS runs a comprehensive compliance test suite on a filesystem
 // implementation.
 //
-// By default, the filesystem must be empty and writable. TestFS will
-// create, modify, and delete files to test all write operations.
-//
-// Use WithFiles option for read-only filesystems with pre-populated files.
+// Tests automatically adapt to filesystem capabilities - tests that require
+// write operations will create their own test files if the filesystem is
+// writable (implements CreateFS), or assume files are pre-populated if it's
+// read-only.
 //
 // Typical usage for writable filesystem:
 //
@@ -57,7 +68,9 @@ func WithFiles(files ...string) TestFSOption {
 //	    fsys := setupReadOnlyFS(t)  // Pre-populate with files
 //	    ctx := context.Background()
 //	    fstest.TestFS(ctx, t, fsys,
-//	        fstest.WithFiles("file.txt", "dir/nested.txt"))
+//	        fstest.WithFiles(
+//	            fstest.File{Path: "file1.txt", Data: []byte("content")},
+//	        ))
 //	}
 func TestFS(
 	ctx context.Context, t *testing.T, fsys fs.FS, opts ...TestFSOption,
@@ -70,196 +83,111 @@ func TestFS(
 		opt(&o)
 	}
 
-	// If expected files are provided, test read-only mode
-	if len(o.expectedFiles) > 0 {
-		testReadOnly(ctx, t, fsys, o.expectedFiles)
-		return
+	// Use provided files or default comprehensive structure
+	files := o.expectedFiles
+	if files == nil {
+		files = defaultTestFiles()
+		// Only write files if expectedFiles was not provided
+		err := writeTestFiles(ctx, fsys, files)
+		if err != nil {
+			t.Fatalf(
+				"expected writable filesystem or fstest.WithFiles: %v",
+				err,
+			)
+		}
 	}
 
-	// Otherwise, test all write operations on empty filesystem
-	// Test basic file operations
-	t.Run("File", func(t *testing.T) {
-		t.Run("CreateAndRead", func(t *testing.T) {
-			testCreateAndRead(ctx, t, fsys)
-		})
+	testAbs(ctx, t, fsys)
+	testAppend(ctx, t, fsys)
+	testChmod(ctx, t, fsys)
+	testChown(ctx, t, fsys)
+	testChtimes(ctx, t, fsys)
+	testCreate(ctx, t, fsys)
+	testDirFS(ctx, t, fsys)
+	testGlob(ctx, t, fsys, files)
+	testLocalize(ctx, t, fsys)
+	testMkdir(ctx, t, fsys)
+	testReadDir(ctx, t, fsys, files)
+	testRel(ctx, t, fsys)
+	testRemove(ctx, t, fsys)
+	testRename(ctx, t, fsys)
+	testStat(ctx, t, fsys, files)
+	testStress(ctx, t, fsys)
+	testSymlink(ctx, t, fsys)
+	testTemp(ctx, t, fsys)
+	testTruncate(ctx, t, fsys)
+	testWalk(ctx, t, fsys, files)
+	testWorkDir(ctx, t, fsys)
+}
 
-		t.Run("WriteFile", func(t *testing.T) {
-			testWriteFile(ctx, t, fsys)
-		})
-
-		t.Run("CreateTruncates", func(t *testing.T) {
-			testCreateTruncates(ctx, t, fsys)
-		})
-
-		t.Run("Append", func(t *testing.T) {
-			testAppend(ctx, t, fsys)
-		})
-
-		t.Run("ImplicitMkdir", func(t *testing.T) {
-			testImplicitMkdir(ctx, t, fsys)
-		})
-
-		t.Run("ImplicitMkdirWithMode", func(t *testing.T) {
-			testImplicitMkdirWithMode(ctx, t, fsys)
-		})
-	})
-
-	// Test directory operations
-	t.Run("Mkdir", func(t *testing.T) {
-		t.Run("Basic", func(t *testing.T) {
-			testMkdir(ctx, t, fsys)
-		})
-
-		t.Run("All", func(t *testing.T) {
-			testMkdirAll(ctx, t, fsys)
-		})
-	})
-
-	t.Run("ReadDir", func(t *testing.T) {
-		testReadDir(ctx, t, fsys)
-	})
-
-	// Test Walk functionality
-	t.Run("Walk", func(t *testing.T) {
-		t.Run("Basic", func(t *testing.T) {
-			testWalk(ctx, t, fsys)
-		})
-
-		t.Run("BreadthFirst", func(t *testing.T) {
-			testWalkBreadthFirst(ctx, t, fsys)
-		})
-
-		t.Run("Lexicographic", func(t *testing.T) {
-			testWalkLexicographic(ctx, t, fsys)
-		})
-
-		t.Run("Empty", func(t *testing.T) {
-			testWalkEmpty(ctx, t, fsys)
-		})
-
-		t.Run("SingleLevel", func(t *testing.T) {
-			testWalkSingleLevel(ctx, t, fsys)
-		})
-
-		// Test various depth limits
-		for _, depth := range []int{0, 1, 2, 5} {
-			t.Run(fmt.Sprintf("Depth%d", depth), func(t *testing.T) {
-				testWalkDepth(ctx, t, fsys, depth)
-			})
+func normalizePath(p string) []string {
+	var parts []string
+	for p != "" && p != "." {
+		if path.IsRoot(p) {
+			break
 		}
+		dir, file := path.Split(p)
+		if file != "" {
+			parts = append([]string{file}, parts...)
+		}
+		if dir == "" || dir == p {
+			break
+		}
+		p = dir
+	}
+	return parts
+}
+
+func pathsEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aNorm := make([][]string, len(a))
+	bNorm := make([][]string, len(b))
+	for i := range a {
+		aNorm[i] = normalizePath(a[i])
+	}
+	for i := range b {
+		bNorm[i] = normalizePath(b[i])
+	}
+	slices.SortFunc(aNorm, func(x, y []string) int {
+		return slices.Compare(x, y)
 	})
-
-	// Test removal operations
-	t.Run("Remove", func(t *testing.T) {
-		t.Run("Basic", func(t *testing.T) {
-			testRemove(ctx, t, fsys)
-		})
-
-		t.Run("All", func(t *testing.T) {
-			testRemoveAll(ctx, t, fsys)
-		})
+	slices.SortFunc(bNorm, func(x, y []string) int {
+		return slices.Compare(x, y)
 	})
+	return slices.EqualFunc(aNorm, bNorm, slices.Equal)
+}
 
-	// Test rename operations
-	t.Run("Rename", func(t *testing.T) {
-		testRename(ctx, t, fsys)
-	})
+// defaultTestFiles returns a comprehensive file structure for testing.
+// Tests extract what they need from this structure.
+func defaultTestFiles() []File {
+	return []File{
+		{Path: "a/b/c/deep.txt", Data: []byte("deep")},
+		{Path: "a/b/file.txt", Data: []byte("ab")},
+		{Path: "a/file.txt", Data: []byte("a")},
+		{Path: "dir/nested.txt", Data: []byte("nested")},
+		{Path: "dir/subdir/file.txt", Data: []byte("content")},
+		{Path: "empty/.keep", Data: []byte("")},
+		{Path: "file1.txt", Data: []byte("one")},
+		{Path: "file2.txt", Data: []byte("two")},
+		{Path: "file3.json", Data: []byte("json")},
+		{Path: "x/file.txt", Data: []byte("x")},
+		{Path: "x/y/file.txt", Data: []byte("xy")},
+		{Path: "x/y/z/file.txt", Data: []byte("xyz")},
+	}
+}
 
-	// Test Stat operations
-	t.Run("Stat", func(t *testing.T) {
-		testStat(ctx, t, fsys)
-	})
-
-	// Test Glob operations
-	t.Run("Glob", func(t *testing.T) {
-		testGlob(ctx, t, fsys)
-	})
-
-	// Test DirFS (tar) operations
-	t.Run("DirFS", func(t *testing.T) {
-		t.Run("OpenEmptyDir", func(t *testing.T) {
-			testOpenEmptyDir(ctx, t, fsys)
-		})
-
-		t.Run("OpenDir", func(t *testing.T) {
-			testOpenDir(ctx, t, fsys)
-		})
-
-		t.Run("CreateDir", func(t *testing.T) {
-			testCreateDir(ctx, t, fsys)
-		})
-	})
-
-	// Test metadata operations
-	t.Run("Chmod", func(t *testing.T) {
-		testChmod(ctx, t, fsys)
-	})
-
-	t.Run("Chown", func(t *testing.T) {
-		testChown(ctx, t, fsys)
-	})
-
-	t.Run("Chtimes", func(t *testing.T) {
-		testChtimes(ctx, t, fsys)
-	})
-
-	// Test file operations
-	t.Run("Truncate", func(t *testing.T) {
-		testTruncate(ctx, t, fsys)
-	})
-
-	// Test symlink operations
-	t.Run("Symlink", func(t *testing.T) {
-		t.Run("Create", func(t *testing.T) {
-			testSymlink(ctx, t, fsys)
-		})
-
-		t.Run("Read", func(t *testing.T) {
-			testReadlink(ctx, t, fsys)
-		})
-	})
-
-	// Test temp operations
-	t.Run("Temp", func(t *testing.T) {
-		t.Run("File", func(t *testing.T) {
-			testTempFile(ctx, t, fsys)
-		})
-
-		t.Run("Dir", func(t *testing.T) {
-			testTempDir(ctx, t, fsys)
-		})
-	})
-
-	// Test working directory context
-	t.Run("WorkDir", func(t *testing.T) {
-		testWorkDir(ctx, t, fsys)
-	})
-
-	// Test path operations
-	t.Run("Abs", func(t *testing.T) {
-		testAbs(ctx, t, fsys)
-	})
-
-	t.Run("Rel", func(t *testing.T) {
-		testRel(ctx, t, fsys)
-	})
-
-	t.Run("Localize", func(t *testing.T) {
-		TestLocalize(ctx, t, fsys)
-	})
-
-	// Stress tests combining multiple operations
-	t.Run("Stress", func(t *testing.T) {
-		t.Run("MixedOperations", func(t *testing.T) {
-			testMixedOperations(ctx, t, fsys)
-		})
-
-		t.Run("ConcurrentReads", func(t *testing.T) {
-			testConcurrentReads(ctx, t, fsys)
-		})
-
-		t.Run("ModifyAndRead", func(t *testing.T) {
-			testModifyAndRead(ctx, t, fsys)
-		})
-	})
+// writeTestFiles writes the test file structure to a writable filesystem.
+// Returns error if the filesystem doesn't support writes.
+func writeTestFiles(
+	ctx context.Context, fsys fs.FS, files []File,
+) error {
+	for _, file := range files {
+		err := fs.WriteFile(ctx, fsys, file.Path, file.Data)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

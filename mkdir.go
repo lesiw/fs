@@ -37,6 +37,10 @@ type MkdirFS interface {
 //
 // Requires: [MkdirFS]
 func Mkdir(ctx context.Context, fsys FS, name string) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	if mfs, ok := fsys.(MkdirFS); ok {
 		if err := mfs.Mkdir(ctx, name); !errors.Is(err, ErrUnsupported) {
 			return newPathError("mkdir", name, err)
@@ -58,6 +62,10 @@ func Mkdir(ctx context.Context, fsys FS, name string) error {
 //
 // Requires: [MkdirFS]
 func MkdirAll(ctx context.Context, fsys FS, name string) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	mfs, ok := fsys.(MkdirFS)
 	if !ok {
 		return &PathError{

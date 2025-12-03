@@ -21,6 +21,13 @@ type RenameFS interface {
 //
 // Requires: [RenameFS] || ([FS] && [CreateFS] && [RemoveFS])
 func Rename(ctx context.Context, fsys FS, oldname, newname string) error {
+	var err error
+	if oldname, err = localizePath(ctx, fsys, oldname); err != nil {
+		return err
+	}
+	if newname, err = localizePath(ctx, fsys, newname); err != nil {
+		return err
+	}
 	if rfs, ok := fsys.(RenameFS); ok {
 		err := rfs.Rename(ctx, oldname, newname)
 		if err == nil || !errors.Is(err, ErrUnsupported) {

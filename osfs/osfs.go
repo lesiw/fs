@@ -23,6 +23,7 @@ import (
 	"io"
 	"iter"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -296,14 +297,15 @@ func localizePath(p string) (string, error) {
 
 	// Check if this is a directory path
 	if fspath.IsDir(p) {
-		// Directory path - localize without trailing slash, then add it back
 		dir := fspath.Dir(p)
+		dir = path.Clean(dir)
 		base, err := filepath.Localize(dir)
 		if err != nil {
 			return "", err
 		}
 		return base + string(filepath.Separator), nil
 	}
+	p = path.Clean(p)
 	return filepath.Localize(p)
 }
 

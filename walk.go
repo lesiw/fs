@@ -47,6 +47,12 @@ type WalkFS interface {
 func ReadDir(
 	ctx context.Context, fsys FS, name string,
 ) iter.Seq2[DirEntry, error] {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return func(yield func(DirEntry, error) bool) {
+			yield(nil, err)
+		}
+	}
 	if rdfs, ok := fsys.(ReadDirFS); ok {
 		return rdfs.ReadDir(ctx, name)
 	}

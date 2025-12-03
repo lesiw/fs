@@ -11,8 +11,6 @@ import (
 
 // testWorkDir tests working directory context behavior.
 func testWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
 	// Create a test directory structure
 	// /data/file.txt
 	if err := fs.MkdirAll(ctx, fsys, "data"); err != nil {

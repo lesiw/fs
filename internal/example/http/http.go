@@ -116,9 +116,18 @@ func (f *HTTPFS) Stat(
 		}
 	}
 
+	// Detect if this is a directory
+	// HTTP file servers typically serve directories with text/html content
+	// type (directory listing), while files have their actual content type
+	isDir := false
+	contentType := resp.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "text/html") {
+		isDir = true
+	}
+
 	return &httpFileInfo{
 		name:  path.Base(name),
-		isDir: false,
+		isDir: isDir,
 		size:  size,
 		time:  modTime,
 	}, nil

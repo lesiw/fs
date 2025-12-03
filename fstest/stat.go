@@ -2,95 +2,106 @@ package fstest
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
-// TestStat tests file metadata retrieval.
-func testStat(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
+func testStat(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	sfs, ok := fsys.(fs.StatFS)
 	if !ok {
 		t.Skip("StatFS not supported")
 	}
 
-	// Test stat on file
-	fileName := "test_stat_file.txt"
-	helloData := []byte("hello")
-	if err := fs.WriteFile(ctx, fsys, fileName, helloData); err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Skip("write operations not supported")
-		}
-		t.Fatalf("write file: %v", err)
-	}
+	file, dir := testStatWant(files)
 
-	info, statErr := sfs.Stat(ctx, fileName)
-	if statErr != nil {
-		t.Fatalf("stat file: %v", statErr)
-	}
-
-	if info.IsDir() {
-		t.Errorf("stat file: IsDir() = true, expected false")
-	}
-
-	if info.Name() != fileName {
-		t.Errorf("stat file: Name() = %q, expected %q", info.Name(), fileName)
-	}
-
-	if info.Size() != 5 {
-		t.Errorf("stat file: Size() = %d, expected 5", info.Size())
-	}
-
-	// Test stat on directory (skip if mkdir not supported)
-	dirName := "test_stat_dir"
-	mkdirErr := fs.Mkdir(ctx, fsys, dirName)
-	if !errors.Is(mkdirErr, fs.ErrUnsupported) {
-		if mkdirErr != nil {
-			t.Fatalf("mkdir: %v", mkdirErr)
-		}
-
-		// Create a file in the directory to make it visible
-		// in implementations where directories are virtual (like S3)
-		dirFile := dirName + "/file.txt"
-		dirData := []byte("test")
-		if err := fs.WriteFile(ctx, fsys, dirFile, dirData); err != nil {
-			if errors.Is(err, fs.ErrUnsupported) {
-				t.Skip("write operations not supported")
+	if file != nil {
+		t.Run("StatFile", func(t *testing.T) {
+			info, err := sfs.Stat(ctx, file.Path)
+			if err != nil {
+				t.Fatalf("Stat(%q) = %v", file.Path, err)
 			}
-			t.Fatalf("WriteFile(%q): %v", dirFile, err)
-		}
 
-		info, statErr = sfs.Stat(ctx, dirName)
-		if statErr != nil {
-			t.Fatalf("stat dir: %v", statErr)
-		}
+			if info.IsDir() {
+				t.Errorf("Stat(%q): IsDir() = true, want false", file.Path)
+			}
 
-		if !info.IsDir() {
-			t.Errorf("stat dir: IsDir() = false, expected true")
-		}
+			if got, want := info.Name(), path.Base(file.Path); got != want {
+				t.Errorf(
+					"Stat(%q): Name() = %q, want %q",
+					file.Path, got, want,
+				)
+			}
 
-		if info.Name() != dirName {
-			t.Errorf(
-				"stat dir: Name() = %q, expected %q", info.Name(), dirName,
-			)
+			size := int64(len(file.Data))
+			if got, want := info.Size(), size; got != want {
+				t.Errorf(
+					"Stat(%q): Size() = %d, want %d",
+					file.Path, got, want,
+				)
+			}
+
+			if file.Mode != 0 {
+				if got := info.Mode().Perm(); got != file.Mode.Perm() {
+					t.Errorf(
+						"Stat(%q): Mode().Perm() = %o, want %o",
+						file.Path, got, file.Mode.Perm(),
+					)
+				}
+			}
+
+			if !file.ModTime.IsZero() {
+				if got := info.ModTime(); !got.Equal(file.ModTime) {
+					t.Errorf(
+						"Stat(%q): ModTime() = %v, want %v",
+						file.Path, got, file.ModTime,
+					)
+				}
+			}
+		})
+	}
+
+	if dir != "" {
+		t.Run("StatDirectory", func(t *testing.T) {
+			info, err := sfs.Stat(ctx, dir)
+			if err != nil {
+				t.Fatalf("Stat(%q) = %v", dir, err)
+			}
+
+			if !info.IsDir() {
+				t.Errorf("Stat(%q): IsDir() = false, want true", dir)
+			}
+
+			if got, want := info.Name(), path.Base(dir); got != want {
+				t.Errorf("Stat(%q): Name() = %q, want %q", dir, got, want)
+			}
+		})
+	}
+
+	t.Run("StatNonexistent", func(t *testing.T) {
+		_, err := sfs.Stat(ctx, "test_stat_nonexistent")
+		if err == nil {
+			t.Errorf("Stat(nonexistent) = nil, want error")
+		}
+	})
+}
+
+func testStatWant(files []File) (*File, string) {
+	var file *File
+	var dir string
+
+	for i := range files {
+		if file == nil {
+			file = &files[i]
+		}
+		if d := path.Dir(files[i].Path); d != "." && dir == "" {
+			dir = d
+		}
+		if file != nil && dir != "" {
+			break
 		}
 	}
 
-	// Test stat on non-existent file
-	nonexistent := "test_stat_nonexistent"
-	_, statErr = sfs.Stat(ctx, nonexistent)
-	if statErr == nil {
-		t.Errorf("stat nonexistent: expected error, got nil")
-	}
-
-	// Clean up
-	if err := fs.Remove(ctx, fsys, fileName); err != nil {
-		t.Fatalf("cleanup file: %v", err)
-	}
-	if err := fs.RemoveAll(ctx, fsys, dirName); err != nil {
-		t.Fatalf("cleanup dir: %v", err)
-	}
+	return file, dir
 }

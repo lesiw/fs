@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"lesiw.io/fs/fstest"
@@ -13,18 +14,31 @@ func TestHTTPFS(t *testing.T) {
 	// Create a temporary directory with test files
 	tmpDir := t.TempDir()
 
-	// Create test files that HTTP server will serve
-	testFiles := []string{"test.txt", "dir/nested.txt", "another.txt"}
-	for _, path := range testFiles {
-		fullPath := tmpDir + "/" + path
-		if path == "dir/nested.txt" {
-			if err := os.MkdirAll(tmpDir+"/dir", 0755); err != nil {
-				t.Fatalf("Failed to create directory: %v", err)
-			}
+	// Create test files for read-only filesystem
+	testFiles := []fstest.File{
+		{Path: "a/b/c/deep.txt", Data: []byte("deep")},
+		{Path: "a/b/file.txt", Data: []byte("ab")},
+		{Path: "a/file.txt", Data: []byte("a")},
+		{Path: "dir/nested.txt", Data: []byte("nested")},
+		{Path: "dir/subdir/file.txt", Data: []byte("content")},
+		{Path: "empty/.keep", Data: []byte("")},
+		{Path: "file1.txt", Data: []byte("one")},
+		{Path: "file2.txt", Data: []byte("two")},
+		{Path: "file3.json", Data: []byte("json")},
+		{Path: "x/file.txt", Data: []byte("x")},
+		{Path: "x/y/file.txt", Data: []byte("xy")},
+		{Path: "x/y/z/file.txt", Data: []byte("xyz")},
+	}
+
+	for _, f := range testFiles {
+		fullPath := filepath.Join(tmpDir, filepath.FromSlash(f.Path))
+		// Create parent directory
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
 		}
-		content := []byte("hello from " + path)
-		if err := os.WriteFile(fullPath, content, 0644); err != nil {
-			t.Fatalf("Failed to create test file: %v", err)
+		if err := os.WriteFile(fullPath, f.Data, 0644); err != nil {
+			t.Fatalf("write %s: %v", fullPath, err)
 		}
 	}
 
@@ -37,6 +51,6 @@ func TestHTTPFS(t *testing.T) {
 
 	ctx := t.Context()
 
-	// Run the fstest suite with expected files (read-only mode)
+	// Run the fstest suite with WithFiles for read-only filesystem
 	fstest.TestFS(ctx, t, fsys, fstest.WithFiles(testFiles...))
 }

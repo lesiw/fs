@@ -20,6 +20,10 @@ type ChmodFS interface {
 func Chmod(
 	ctx context.Context, fsys FS, name string, mode Mode,
 ) error {
+	var err error
+	if name, err = localizePath(ctx, fsys, name); err != nil {
+		return err
+	}
 	if cfs, ok := fsys.(ChmodFS); ok {
 		if err := cfs.Chmod(ctx, name, mode); !errors.Is(err, ErrUnsupported) {
 			return newPathError("chmod", name, err)

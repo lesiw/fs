@@ -11,9 +11,7 @@ import (
 )
 
 func testAbs(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
-	t.Run("AlreadyAbsolute", func(t *testing.T) {
+	t.Run("AbsAlreadyAbsolute", func(t *testing.T) {
 		abs, err := fs.Abs(ctx, fsys, "/already/absolute")
 		if err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
@@ -21,15 +19,13 @@ func testAbs(ctx context.Context, t *testing.T, fsys fs.FS) {
 			}
 			t.Fatalf("Abs(/already/absolute) err: %v", err)
 		}
-		// Normalize to forward slashes for cross-platform comparison.
-		// Absolute paths are platform-specific but should end with the path.
 		got, want := filepath.ToSlash(abs), "/already/absolute"
 		if !strings.HasSuffix(got, want) {
 			t.Errorf("Abs(/already/absolute) = %q, want suffix %q", abs, want)
 		}
 	})
 
-	t.Run("RelativePath", func(t *testing.T) {
+	t.Run("AbsRelativePath", func(t *testing.T) {
 		input := "relative/path"
 		got, err := fs.Abs(ctx, fsys, input)
 		if err != nil {
@@ -43,11 +39,10 @@ func testAbs(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	})
 
-	t.Run("WithAbsoluteWorkDir", func(t *testing.T) {
+	t.Run("AbsWithAbsoluteWorkDir", func(t *testing.T) {
 		wctx := fs.WithWorkDir(ctx, "/absolute/workdir")
 		abs, err := fs.Abs(wctx, fsys, "file.txt")
 		if err != nil {
-			// This should work via fallback even without AbsFS.
 			t.Fatalf("Abs(file.txt) err: %v", err)
 		}
 		got, want := filepath.ToSlash(abs), "workdir"
@@ -60,7 +55,7 @@ func testAbs(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	})
 
-	t.Run("WithRelativeWorkDir", func(t *testing.T) {
+	t.Run("AbsWithRelativeWorkDir", func(t *testing.T) {
 		wctx := fs.WithWorkDir(ctx, "relative/workdir")
 		abs, err := fs.Abs(wctx, fsys, "file.txt")
 		if err != nil {
@@ -79,7 +74,7 @@ func testAbs(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	})
 
-	t.Run("WorkDirAffectsResult", func(t *testing.T) {
+	t.Run("AbsWorkDirAffectsResult", func(t *testing.T) {
 		noWork, err := fs.Abs(ctx, fsys, "file.txt")
 		if err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {

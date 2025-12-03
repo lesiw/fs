@@ -7,10 +7,15 @@ import (
 	"lesiw.io/fs"
 )
 
-// TestLocalize tests that LocalizeFS.Localize is idempotent.
-//
-// Skips if the filesystem does not implement LocalizeFS.
-func TestLocalize(ctx context.Context, t *testing.T, fsys fs.FS) {
+func testLocalize(ctx context.Context, t *testing.T, fsys fs.FS) {
+	t.Run("Localize", func(t *testing.T) {
+		testLocalizeIdempotent(ctx, t, fsys)
+	})
+}
+
+func testLocalizeIdempotent(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
 	lfs, ok := fsys.(fs.LocalizeFS)
 	if !ok {
 		t.Skip("filesystem does not implement LocalizeFS")

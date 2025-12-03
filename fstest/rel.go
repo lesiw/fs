@@ -3,15 +3,13 @@ package fstest
 import (
 	"context"
 	"errors"
-	"path"
 	"testing"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
 func testRel(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Helper()
-
 	var relTests = []struct {
 		name string
 		base string
@@ -45,7 +43,7 @@ func testRel(ctx context.Context, t *testing.T, fsys fs.FS) {
 		})
 	}
 
-	t.Run("MixedAbsoluteRelative", func(t *testing.T) {
+	t.Run("RelMixedAbsoluteRelative", func(t *testing.T) {
 		_, err := fs.Rel(ctx, fsys, "/absolute", "relative")
 		if err == nil {
 			t.Errorf("Rel(/absolute, relative) = nil, want error")
