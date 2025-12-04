@@ -99,27 +99,27 @@ func testMixedOperations(
 	// Rename a file and verify
 	oldPath := baseDir + "/a/level1.txt"
 	newPath := baseDir + "/a/renamed.txt"
-	if rfs, ok := fsys.(fs.RenameFS); ok {
-		if err := rfs.Rename(ctx, oldPath, newPath); err != nil {
+	if err := fs.Rename(ctx, fsys, oldPath, newPath); err != nil {
+		if !errors.Is(err, fs.ErrUnsupported) {
 			t.Errorf("Rename(%q, %q): %v", oldPath, newPath, err)
-		} else {
-			// Verify old path is gone
-			if _, err := fs.Stat(ctx, fsys, oldPath); err == nil {
-				t.Errorf(
-					"Stat(%q) after rename succeeded, want error",
-					oldPath,
-				)
-			}
-			// Verify new path exists
-			data, err := fs.ReadFile(ctx, fsys, newPath)
-			if err != nil {
-				t.Errorf("ReadFile(%q) after rename: %v", newPath, err)
-			} else if !bytes.Equal(data, testFiles[oldPath]) {
-				t.Errorf(
-					"renamed file content = %q, want %q",
-					data, testFiles[oldPath],
-				)
-			}
+		}
+	} else {
+		// Verify old path is gone
+		if _, err := fs.Stat(ctx, fsys, oldPath); err == nil {
+			t.Errorf(
+				"Stat(%q) after rename succeeded, want error",
+				oldPath,
+			)
+		}
+		// Verify new path exists
+		data, err := fs.ReadFile(ctx, fsys, newPath)
+		if err != nil {
+			t.Errorf("ReadFile(%q) after rename: %v", newPath, err)
+		} else if !bytes.Equal(data, testFiles[oldPath]) {
+			t.Errorf(
+				"renamed file content = %q, want %q",
+				data, testFiles[oldPath],
+			)
 		}
 	}
 

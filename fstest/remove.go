@@ -9,11 +9,6 @@ import (
 )
 
 func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
-	rfs, ok := fsys.(fs.RemoveFS)
-	if !ok {
-		t.Skip("RemoveFS not supported")
-	}
-
 	t.Run("RemoveFile", func(t *testing.T) {
 		fileData := []byte("data")
 		fileName := "test_remove_file.txt"
@@ -25,7 +20,10 @@ func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		cleanup(ctx, t, fsys, fileName)
 
-		if err := rfs.Remove(ctx, fileName); err != nil {
+		if err := fs.Remove(ctx, fsys, fileName); err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("RemoveFS not supported")
+			}
 			t.Fatalf("remove file: %v", err)
 		}
 
@@ -46,7 +44,10 @@ func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		cleanup(ctx, t, fsys, dirName)
 
-		if err := rfs.Remove(ctx, dirName); err != nil {
+		if err := fs.Remove(ctx, fsys, dirName); err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("RemoveFS not supported")
+			}
 			t.Fatalf("remove dir: %v", err)
 		}
 
@@ -75,9 +76,11 @@ func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 			t.Fatalf("write: %v", writeErr)
 		}
 
-		removeErr := rfs.Remove(ctx, nonemptyDir)
+		removeErr := fs.Remove(ctx, fsys, nonemptyDir)
 		if removeErr == nil {
 			t.Errorf("remove non-empty dir: expected error, got nil")
+		} else if errors.Is(removeErr, fs.ErrUnsupported) {
+			t.Skip("RemoveFS not supported")
 		}
 	})
 }

@@ -2,6 +2,7 @@ package fstest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"lesiw.io/fs"
@@ -9,17 +10,15 @@ import (
 )
 
 func testStat(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	sfs, ok := fsys.(fs.StatFS)
-	if !ok {
-		t.Skip("StatFS not supported")
-	}
-
 	file, dir := testStatWant(files)
 
 	if file != nil {
 		t.Run("StatFile", func(t *testing.T) {
-			info, err := sfs.Stat(ctx, file.Path)
+			info, err := fs.Stat(ctx, fsys, file.Path)
 			if err != nil {
+				if errors.Is(err, fs.ErrUnsupported) {
+					t.Skip("StatFS not supported")
+				}
 				t.Fatalf("Stat(%q) = %v", file.Path, err)
 			}
 
@@ -64,8 +63,11 @@ func testStat(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 
 	if dir != "" {
 		t.Run("StatDirectory", func(t *testing.T) {
-			info, err := sfs.Stat(ctx, dir)
+			info, err := fs.Stat(ctx, fsys, dir)
 			if err != nil {
+				if errors.Is(err, fs.ErrUnsupported) {
+					t.Skip("StatFS not supported")
+				}
 				t.Fatalf("Stat(%q) = %v", dir, err)
 			}
 
@@ -80,9 +82,11 @@ func testStat(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	}
 
 	t.Run("StatNonexistent", func(t *testing.T) {
-		_, err := sfs.Stat(ctx, "test_stat_nonexistent")
+		_, err := fs.Stat(ctx, fsys, "test_stat_nonexistent")
 		if err == nil {
 			t.Errorf("Stat(nonexistent) = nil, want error")
+		} else if errors.Is(err, fs.ErrUnsupported) {
+			t.Skip("StatFS not supported")
 		}
 	})
 }

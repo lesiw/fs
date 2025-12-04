@@ -9,11 +9,6 @@ import (
 )
 
 func testRename(ctx context.Context, t *testing.T, fsys fs.FS) {
-	rfs, ok := fsys.(fs.RenameFS)
-	if !ok {
-		t.Skip("RenameFS not supported")
-	}
-
 	t.Run("RenameFile", func(t *testing.T) {
 		fileData := []byte("data")
 		oldName := "test_rename_file_old.txt"
@@ -26,7 +21,10 @@ func testRename(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		cleanup(ctx, t, fsys, newName)
 
-		if err := rfs.Rename(ctx, oldName, newName); err != nil {
+		if err := fs.Rename(ctx, fsys, oldName, newName); err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("RenameFS not supported")
+			}
 			t.Fatalf("rename file: %v", err)
 		}
 
@@ -67,7 +65,10 @@ func testRename(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		cleanup(ctx, t, fsys, newDirName)
 
-		if err := rfs.Rename(ctx, oldDirName, newDirName); err != nil {
+		if err := fs.Rename(ctx, fsys, oldDirName, newDirName); err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("RenameFS not supported")
+			}
 			t.Fatalf("rename dir: %v", err)
 		}
 

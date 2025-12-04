@@ -2,6 +2,7 @@ package fstest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"lesiw.io/fs"
@@ -9,17 +10,15 @@ import (
 )
 
 func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	rdfs, ok := fsys.(fs.ReadDirFS)
-	if !ok {
-		t.Skip("ReadDirFS not supported")
-	}
-
 	want := testReadDirWant(files)
 
 	var names []string
 	var entries []fs.DirEntry
-	for e, err := range rdfs.ReadDir(ctx, ".") {
+	for e, err := range fs.ReadDir(ctx, fsys, ".") {
 		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("ReadDirFS not supported")
+			}
 			t.Fatalf("ReadDir(\".\") iteration: %v", err)
 		}
 		names = append(names, e.Name())
