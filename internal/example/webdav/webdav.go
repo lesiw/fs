@@ -23,7 +23,7 @@ import (
 )
 
 // FS implements fs.FS for WebDAV servers.
-type FS struct {
+type webdavFS struct {
 	client *gowebdav.Client
 }
 
@@ -32,7 +32,7 @@ type FS struct {
 // url: WebDAV server URL (e.g., "http://localhost:8080/webdav")
 // user: Username for authentication
 // password: Password for authentication
-func New(url, user, password string) (*FS, error) {
+func New(url, user, password string) (fs.FS, error) {
 	client := gowebdav.NewClient(url, user, password)
 
 	// Test connection
@@ -40,12 +40,12 @@ func New(url, user, password string) (*FS, error) {
 		return nil, fmt.Errorf("connecting to WebDAV server: %w", err)
 	}
 
-	return &FS{client: client}, nil
+	return &webdavFS{client: client}, nil
 }
 
 // fullPath resolves the full path by prepending the working directory from
 // context if present.
-func (f *FS) fullPath(ctx context.Context, name string) string {
+func (f *webdavFS) fullPath(ctx context.Context, name string) string {
 	if workDir := fs.WorkDir(ctx); workDir != "" {
 		name = path.Join(workDir, name)
 	}
@@ -53,7 +53,9 @@ func (f *FS) fullPath(ctx context.Context, name string) string {
 }
 
 // Open implements fs.FS
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *webdavFS) Open(
+	ctx context.Context, name string,
+) (io.ReadCloser, error) {
 	data, err := f.client.Read(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
@@ -67,7 +69,9 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS
-func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *webdavFS) Create(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	return &webdavWriteCloser{
 		client:     f.client,
 		name:       f.fullPath(ctx, name),
@@ -77,7 +81,9 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 }
 
 // Append implements fs.AppendFS
-func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *webdavFS) Append(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	fullPath := f.fullPath(ctx, name)
 	wc := &webdavWriteCloser{
 		client:     f.client,
@@ -129,7 +135,9 @@ func (w *webdavWriteCloser) Close() error {
 }
 
 // Stat implements fs.StatFS
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *webdavFS) Stat(
+	ctx context.Context, name string,
+) (fs.FileInfo, error) {
 	info, err := f.client.Stat(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
@@ -148,7 +156,7 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 }
 
 // ReadDir implements fs.ReadDirFS
-func (f *FS) ReadDir(
+func (f *webdavFS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -185,7 +193,7 @@ func (f *FS) ReadDir(
 }
 
 // Remove implements fs.RemoveFS
-func (f *FS) Remove(ctx context.Context, name string) error {
+func (f *webdavFS) Remove(ctx context.Context, name string) error {
 	fullPath := f.fullPath(ctx, name)
 	// Check if this is a directory
 	info, statErr := f.Stat(ctx, name)
@@ -216,7 +224,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 }
 
 // Mkdir implements fs.MkdirFS
-func (f *FS) Mkdir(ctx context.Context, name string) error {
+func (f *webdavFS) Mkdir(ctx context.Context, name string) error {
 	perm := fs.DirMode(ctx)
 	err := f.client.Mkdir(f.fullPath(ctx, name), perm)
 	if err != nil {
@@ -230,7 +238,7 @@ func (f *FS) Mkdir(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS
-func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
+func (f *webdavFS) Rename(ctx context.Context, oldname, newname string) error {
 	err := f.client.Rename(
 		f.fullPath(ctx, oldname), f.fullPath(ctx, newname), false,
 	)
@@ -284,7 +292,7 @@ func (de *webdavDirEntry) Info() (fs.FileInfo, error) {
 }
 
 // Abs implements fs.AbsFS
-func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+func (f *webdavFS) Abs(ctx context.Context, name string) (string, error) {
 	// WebDAV URLs can be absolute, return as-is if already absolute
 	if path.IsAbs(name) {
 		return path.Clean(name), nil
@@ -301,13 +309,13 @@ func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 
 // Compile-time interface checks
 var (
-	_ fs.FS        = (*FS)(nil)
-	_ fs.CreateFS  = (*FS)(nil)
-	_ fs.AppendFS  = (*FS)(nil)
-	_ fs.StatFS    = (*FS)(nil)
-	_ fs.ReadDirFS = (*FS)(nil)
-	_ fs.RemoveFS  = (*FS)(nil)
-	_ fs.MkdirFS   = (*FS)(nil)
-	_ fs.RenameFS  = (*FS)(nil)
-	_ fs.AbsFS     = (*FS)(nil)
+	_ fs.FS        = (*webdavFS)(nil)
+	_ fs.CreateFS  = (*webdavFS)(nil)
+	_ fs.AppendFS  = (*webdavFS)(nil)
+	_ fs.StatFS    = (*webdavFS)(nil)
+	_ fs.ReadDirFS = (*webdavFS)(nil)
+	_ fs.RemoveFS  = (*webdavFS)(nil)
+	_ fs.MkdirFS   = (*webdavFS)(nil)
+	_ fs.RenameFS  = (*webdavFS)(nil)
+	_ fs.AbsFS     = (*webdavFS)(nil)
 )

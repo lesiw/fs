@@ -24,7 +24,7 @@ import (
 )
 
 // FS implements fs.FS for S3-compatible object storage.
-type FS struct {
+type s3FS struct {
 	client *minio.Client
 	bucket string
 }
@@ -38,7 +38,7 @@ type FS struct {
 // useSSL: whether to use HTTPS
 func New(
 	endpoint, bucket, accessKey, secretKey string, useSSL bool,
-) (*FS, error) {
+) (fs.FS, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -47,15 +47,15 @@ func New(
 		return nil, fmt.Errorf("creating minio client: %w", err)
 	}
 
-	return &FS{
+	return &s3FS{
 		client: client,
 		bucket: bucket,
 	}, nil
 }
 
-var _ fs.FS = (*FS)(nil)
+var _ fs.FS = (*s3FS)(nil)
 
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *s3FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	obj, err := f.client.GetObject(
 		ctx, f.bucket, name, minio.GetObjectOptions{},
 	)
@@ -70,9 +70,11 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
-var _ fs.CreateFS = (*FS)(nil)
+var _ fs.CreateFS = (*s3FS)(nil)
 
-func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *s3FS) Create(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	return &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -82,9 +84,11 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	}, nil
 }
 
-var _ fs.AppendFS = (*FS)(nil)
+var _ fs.AppendFS = (*s3FS)(nil)
 
-func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *s3FS) Append(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	wc := &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -154,9 +158,9 @@ func (w *s3WriteCloser) Close() error {
 	return err
 }
 
-var _ fs.StatFS = (*FS)(nil)
+var _ fs.StatFS = (*s3FS)(nil)
 
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *s3FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	info, err := f.client.StatObject(
 		ctx, f.bucket, name, minio.StatObjectOptions{},
 	)
@@ -218,9 +222,9 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	}, nil
 }
 
-var _ fs.ReadDirFS = (*FS)(nil)
+var _ fs.ReadDirFS = (*s3FS)(nil)
 
-func (f *FS) ReadDir(
+func (f *s3FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -269,9 +273,9 @@ func (f *FS) ReadDir(
 	}
 }
 
-var _ fs.RemoveFS = (*FS)(nil)
+var _ fs.RemoveFS = (*s3FS)(nil)
 
-func (f *FS) Remove(ctx context.Context, name string) error {
+func (f *s3FS) Remove(ctx context.Context, name string) error {
 	// Check if this is a virtual directory with children
 	info, statErr := f.Stat(ctx, name)
 	if statErr == nil && info.IsDir() {
@@ -310,16 +314,16 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 	return nil
 }
 
-var _ fs.LocalizeFS = (*FS)(nil)
+var _ fs.LocalizeFS = (*s3FS)(nil)
 
-func (f *FS) Localize(ctx context.Context, name string) (string, error) {
+func (f *s3FS) Localize(ctx context.Context, name string) (string, error) {
 	// MinIO doesn't accept "./" prefix in paths
 	return strings.TrimPrefix(name, "./"), nil
 }
 
-var _ fs.AbsFS = (*FS)(nil)
+var _ fs.AbsFS = (*s3FS)(nil)
 
-func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+func (f *s3FS) Abs(ctx context.Context, name string) (string, error) {
 	// If already an s3:// URL, return as-is
 	if strings.HasPrefix(name, "s3://") {
 		return name, nil

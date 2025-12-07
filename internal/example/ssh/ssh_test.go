@@ -10,6 +10,7 @@ import (
 
 	"lesiw.io/ctrctl"
 	"lesiw.io/defers"
+	"lesiw.io/fs"
 	"lesiw.io/fs/fstest"
 )
 
@@ -37,11 +38,13 @@ func TestSSHFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SSH filesystem: %v", err)
 	}
-	t.Cleanup(func() { _ = fsys.Close() })
+	t.Cleanup(func() { _ = fs.Close(fsys) })
 
 	// linuxserver/openssh-server puts files in /config which is the
 	// user's home directory. Use a subdirectory for testing.
-	fsys.SetPrefix("testdir")
+	if sfs, ok := fsys.(*sshFS); ok {
+		sfs.SetPrefix("testdir")
+	}
 
 	ctx := t.Context()
 

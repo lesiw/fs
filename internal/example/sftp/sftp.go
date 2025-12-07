@@ -26,7 +26,7 @@ import (
 )
 
 // FS implements lesiw.io/fs.FS using SFTP.
-type FS struct {
+type sftpFS struct {
 	client   *sftp.Client
 	sshConn  *ssh.Client
 	basePath string
@@ -37,7 +37,7 @@ type FS struct {
 // addr: SFTP server address (e.g., "localhost:22")
 // user: Username for authentication
 // password: Password for authentication
-func New(addr, user, password string) (*FS, error) {
+func New(addr, user, password string) (fs.FS, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -60,7 +60,7 @@ func New(addr, user, password string) (*FS, error) {
 		return nil, err
 	}
 
-	return &FS{
+	return &sftpFS{
 		client:   client,
 		sshConn:  sshConn,
 		basePath: "",
@@ -69,11 +69,11 @@ func New(addr, user, password string) (*FS, error) {
 
 // SetBasePath sets a base path prefix for all operations.
 // Useful when the SFTP server restricts access to a subdirectory.
-func (f *FS) SetBasePath(path string) {
+func (f *sftpFS) SetBasePath(path string) {
 	f.basePath = path
 }
 
-func (f *FS) fullPath(ctx context.Context, name string) string {
+func (f *sftpFS) fullPath(ctx context.Context, name string) string {
 	if workDir := fs.WorkDir(ctx); workDir != "" {
 		name = path.Join(workDir, name)
 	}
@@ -84,7 +84,7 @@ func (f *FS) fullPath(ctx context.Context, name string) string {
 }
 
 // Close closes the SFTP client and underlying SSH connection.
-func (f *FS) Close() error {
+func (f *sftpFS) Close() error {
 	if err := f.client.Close(); err != nil {
 		_ = f.sshConn.Close()
 		return err
@@ -93,7 +93,9 @@ func (f *FS) Close() error {
 }
 
 // Open implements fs.FS.
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *sftpFS) Open(
+	ctx context.Context, name string,
+) (io.ReadCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -111,7 +113,9 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS.
-func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *sftpFS) Create(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "create",
@@ -136,7 +140,9 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 }
 
 // Append implements fs.AppendFS.
-func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *sftpFS) Append(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "append",
@@ -161,7 +167,7 @@ func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 }
 
 // Stat implements fs.StatFS.
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *sftpFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "stat",
@@ -179,7 +185,7 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *FS) ReadDir(
+func (f *sftpFS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -202,7 +208,7 @@ func (f *FS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *FS) Mkdir(
+func (f *sftpFS) Mkdir(
 	ctx context.Context, name string,
 ) error {
 	if name == "" {
@@ -226,7 +232,7 @@ func (f *FS) Mkdir(
 }
 
 // Remove implements fs.RemoveFS.
-func (f *FS) Remove(ctx context.Context, name string) error {
+func (f *sftpFS) Remove(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "remove",
@@ -243,7 +249,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *FS) Rename(
+func (f *sftpFS) Rename(
 	ctx context.Context, oldname, newname string,
 ) error {
 	if oldname == "" || newname == "" {
@@ -263,7 +269,7 @@ func (f *FS) Rename(
 }
 
 // Chmod implements fs.ChmodFS.
-func (f *FS) Chmod(
+func (f *sftpFS) Chmod(
 	ctx context.Context, name string, mode fs.Mode,
 ) error {
 	if name == "" {
@@ -283,7 +289,7 @@ func (f *FS) Chmod(
 }
 
 // Chown implements fs.ChownFS.
-func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
+func (f *sftpFS) Chown(ctx context.Context, name string, uid, gid int) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chown",
@@ -300,7 +306,7 @@ func (f *FS) Chown(ctx context.Context, name string, uid, gid int) error {
 }
 
 // Chtimes implements fs.ChtimesFS.
-func (f *FS) Chtimes(
+func (f *sftpFS) Chtimes(
 	ctx context.Context, name string, atime, mtime time.Time,
 ) error {
 	if name == "" {
@@ -320,7 +326,7 @@ func (f *FS) Chtimes(
 }
 
 // Symlink implements fs.SymlinkFS.
-func (f *FS) Symlink(
+func (f *sftpFS) Symlink(
 	ctx context.Context, oldname, newname string,
 ) error {
 	if oldname == "" || newname == "" {
@@ -339,7 +345,7 @@ func (f *FS) Symlink(
 }
 
 // ReadLink implements fs.ReadLinkFS.
-func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
+func (f *sftpFS) ReadLink(ctx context.Context, name string) (string, error) {
 	if name == "" {
 		return "", &fs.PathError{
 			Op:   "readlink",
@@ -418,7 +424,7 @@ func (de *dirEntry) Info() (fs.FileInfo, error) {
 func (de *dirEntry) Path() string { return "" }
 
 // Abs implements fs.AbsFS
-func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+func (f *sftpFS) Abs(ctx context.Context, name string) (string, error) {
 	// If already absolute, return as-is
 	if path.IsAbs(name) {
 		return path.Clean(name), nil

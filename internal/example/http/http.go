@@ -19,15 +19,15 @@ import (
 	"lesiw.io/fs"
 )
 
-// HTTPFS implements a read-only lesiw.io/fs.FS using HTTP.
-type HTTPFS struct {
+// httpFS implements a read-only lesiw.io/fs.FS using HTTP.
+type httpFS struct {
 	baseURL string
 	client  *http.Client
 }
 
-// New creates a new HTTPFS instance for the given base URL.
-func New(baseURL string) *HTTPFS {
-	return &HTTPFS{
+// New creates a new HTTP filesystem for the given base URL.
+func New(baseURL string) fs.FS {
+	return &httpFS{
 		baseURL: strings.TrimSuffix(baseURL, "/"),
 		client: &http.Client{
 			Timeout: 30 * time.Second,
@@ -36,7 +36,7 @@ func New(baseURL string) *HTTPFS {
 }
 
 // Open implements fs.FS (read-only).
-func (f *HTTPFS) Open(
+func (f *httpFS) Open(
 	ctx context.Context, name string,
 ) (io.ReadCloser, error) {
 	if name == "" {
@@ -73,7 +73,7 @@ func (f *HTTPFS) Open(
 }
 
 // Stat implements fs.StatFS.
-func (f *HTTPFS) Stat(
+func (f *httpFS) Stat(
 	ctx context.Context, name string,
 ) (fs.FileInfo, error) {
 	if name == "" || name == "." {
@@ -168,7 +168,7 @@ func (fi *httpFileInfo) Mode() fs.Mode {
 }
 
 // Abs implements fs.AbsFS
-func (f *HTTPFS) Abs(ctx context.Context, name string) (string, error) {
+func (f *httpFS) Abs(ctx context.Context, name string) (string, error) {
 	// Resolve with WorkDir if present
 	fullPath := name
 	if workDir := fs.WorkDir(ctx); workDir != "" {

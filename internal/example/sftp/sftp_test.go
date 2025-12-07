@@ -10,6 +10,7 @@ import (
 
 	"lesiw.io/ctrctl"
 	"lesiw.io/defers"
+	"lesiw.io/fs"
 	"lesiw.io/fs/fstest"
 )
 
@@ -37,11 +38,13 @@ func TestSFTPFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SFTP filesystem: %v", err)
 	}
-	t.Cleanup(func() { _ = fsys.Close() })
+	t.Cleanup(func() { _ = fs.Close(fsys) })
 
 	// atmoz/sftp server chroots users to /home/testuser
 	// The "upload" directory is relative to the chroot
-	fsys.SetBasePath("upload")
+	if sfs, ok := fsys.(*sftpFS); ok {
+		sfs.SetBasePath("upload")
+	}
 
 	ctx := t.Context()
 

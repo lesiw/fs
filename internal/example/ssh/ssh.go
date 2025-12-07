@@ -23,14 +23,14 @@ import (
 )
 
 // SSHFS implements lesiw.io/fs.FS using SFTP over SSH.
-type SSHFS struct {
+type sshFS struct {
 	client *sftp.Client
 	conn   *ssh.Client
 	prefix string
 }
 
 // New creates a new SSHFS instance connected to the given SSH server.
-func New(addr, user, password string) (*SSHFS, error) {
+func New(addr, user, password string) (fs.FS, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -51,7 +51,7 @@ func New(addr, user, password string) (*SSHFS, error) {
 		return nil, err
 	}
 
-	return &SSHFS{
+	return &sshFS{
 		client: client,
 		conn:   conn,
 		prefix: "",
@@ -60,11 +60,11 @@ func New(addr, user, password string) (*SSHFS, error) {
 
 // SetPrefix sets a path prefix for all operations.
 // This is useful when the SFTP server restricts access to a subdirectory.
-func (f *SSHFS) SetPrefix(prefix string) {
+func (f *sshFS) SetPrefix(prefix string) {
 	f.prefix = prefix
 }
 
-func (f *SSHFS) fullPath(ctx context.Context, name string) string {
+func (f *sshFS) fullPath(ctx context.Context, name string) string {
 	if workDir := fs.WorkDir(ctx); workDir != "" {
 		name = path.Join(workDir, name)
 	}
@@ -75,7 +75,7 @@ func (f *SSHFS) fullPath(ctx context.Context, name string) string {
 }
 
 // Close closes the SFTP and SSH connections.
-func (f *SSHFS) Close() error {
+func (f *sshFS) Close() error {
 	if err := f.client.Close(); err != nil {
 		_ = f.conn.Close()
 		return err
@@ -84,7 +84,7 @@ func (f *SSHFS) Close() error {
 }
 
 // Open implements fs.FS.
-func (f *SSHFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *sshFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -102,7 +102,7 @@ func (f *SSHFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS.
-func (f *SSHFS) Create(
+func (f *sshFS) Create(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
 	if name == "" {
@@ -129,7 +129,7 @@ func (f *SSHFS) Create(
 }
 
 // Append implements fs.AppendFS.
-func (f *SSHFS) Append(
+func (f *sshFS) Append(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
 	if name == "" {
@@ -156,7 +156,7 @@ func (f *SSHFS) Append(
 }
 
 // Stat implements fs.StatFS.
-func (f *SSHFS) Stat(
+func (f *sshFS) Stat(
 	ctx context.Context, name string,
 ) (fs.FileInfo, error) {
 	if name == "" {
@@ -176,7 +176,7 @@ func (f *SSHFS) Stat(
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *SSHFS) ReadDir(
+func (f *sshFS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -199,7 +199,7 @@ func (f *SSHFS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *SSHFS) Mkdir(
+func (f *sshFS) Mkdir(
 	ctx context.Context, name string,
 ) error {
 	if name == "" {
@@ -224,7 +224,7 @@ func (f *SSHFS) Mkdir(
 }
 
 // Remove implements fs.RemoveFS.
-func (f *SSHFS) Remove(ctx context.Context, name string) error {
+func (f *sshFS) Remove(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "remove",
@@ -242,7 +242,7 @@ func (f *SSHFS) Remove(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *SSHFS) Rename(
+func (f *sshFS) Rename(
 	ctx context.Context, oldname, newname string,
 ) error {
 	if oldname == "" || newname == "" {
@@ -262,7 +262,7 @@ func (f *SSHFS) Rename(
 }
 
 // Chmod implements fs.ChmodFS.
-func (f *SSHFS) Chmod(
+func (f *sshFS) Chmod(
 	ctx context.Context, name string, mode fs.Mode,
 ) error {
 	if name == "" {
@@ -282,7 +282,7 @@ func (f *SSHFS) Chmod(
 }
 
 // Chown implements fs.ChownFS.
-func (f *SSHFS) Chown(ctx context.Context, name string, uid, gid int) error {
+func (f *sshFS) Chown(ctx context.Context, name string, uid, gid int) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chown",
@@ -300,7 +300,7 @@ func (f *SSHFS) Chown(ctx context.Context, name string, uid, gid int) error {
 }
 
 // Chtimes implements fs.ChtimesFS.
-func (f *SSHFS) Chtimes(
+func (f *sshFS) Chtimes(
 	ctx context.Context, name string, atime, mtime time.Time,
 ) error {
 	if name == "" {
@@ -320,7 +320,7 @@ func (f *SSHFS) Chtimes(
 }
 
 // Symlink implements fs.SymlinkFS.
-func (f *SSHFS) Symlink(
+func (f *sshFS) Symlink(
 	ctx context.Context, oldname, newname string,
 ) error {
 	if oldname == "" || newname == "" {
@@ -340,7 +340,7 @@ func (f *SSHFS) Symlink(
 }
 
 // ReadLink implements fs.ReadLinkFS.
-func (f *SSHFS) ReadLink(ctx context.Context, name string) (string, error) {
+func (f *sshFS) ReadLink(ctx context.Context, name string) (string, error) {
 	if name == "" {
 		return "", &fs.PathError{
 			Op:   "readlink",
@@ -420,7 +420,7 @@ func (de *sshDirEntry) Info() (fs.FileInfo, error) {
 func (de *sshDirEntry) Path() string { return "" }
 
 // Abs implements fs.AbsFS
-func (f *SSHFS) Abs(ctx context.Context, name string) (string, error) {
+func (f *sshFS) Abs(ctx context.Context, name string) (string, error) {
 	// If already absolute, return as-is
 	if path.IsAbs(name) {
 		return path.Clean(name), nil

@@ -23,7 +23,7 @@ import (
 )
 
 // FS implements lesiw.io/fs.FS using SMB/CIFS.
-type FS struct {
+type smbFS struct {
 	session *smb2.Session
 	share   *smb2.Share
 }
@@ -34,7 +34,7 @@ type FS struct {
 // shareName: Share name to connect to (e.g., "public")
 // user: Username for authentication
 // password: Password for authentication
-func New(addr, shareName, user, password string) (*FS, error) {
+func New(addr, shareName, user, password string) (fs.FS, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -59,14 +59,14 @@ func New(addr, shareName, user, password string) (*FS, error) {
 		return nil, err
 	}
 
-	return &FS{
+	return &smbFS{
 		session: session,
 		share:   share,
 	}, nil
 }
 
 // Close closes the SMB share and session.
-func (f *FS) Close() error {
+func (f *smbFS) Close() error {
 	if err := f.share.Umount(); err != nil {
 		_ = f.session.Logoff()
 		return err
@@ -74,7 +74,7 @@ func (f *FS) Close() error {
 	return f.session.Logoff()
 }
 
-func (f *FS) fullPath(ctx context.Context, name string) string {
+func (f *smbFS) fullPath(ctx context.Context, name string) string {
 	if workDir := fs.WorkDir(ctx); workDir != "" {
 		name = path.Join(workDir, name)
 	}
@@ -82,7 +82,7 @@ func (f *FS) fullPath(ctx context.Context, name string) string {
 }
 
 // Open implements fs.FS.
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *smbFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -100,7 +100,9 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS.
-func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *smbFS) Create(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "create",
@@ -122,7 +124,9 @@ func (f *FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 }
 
 // Append implements fs.AppendFS.
-func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
+func (f *smbFS) Append(
+	ctx context.Context, name string,
+) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "append",
@@ -144,7 +148,7 @@ func (f *FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 }
 
 // Stat implements fs.StatFS.
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *smbFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "stat",
@@ -162,7 +166,7 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *FS) ReadDir(
+func (f *smbFS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -190,7 +194,7 @@ func (f *FS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *FS) Mkdir(
+func (f *smbFS) Mkdir(
 	ctx context.Context, name string,
 ) error {
 	if name == "" {
@@ -210,7 +214,7 @@ func (f *FS) Mkdir(
 }
 
 // Remove implements fs.RemoveFS.
-func (f *FS) Remove(ctx context.Context, name string) error {
+func (f *smbFS) Remove(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "remove",
@@ -229,7 +233,7 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 
 // RemoveAll implements fs.RemoveAllFS to work around go-smb2 bugs where
 // Stat() and Remove() hang on directories in certain states.
-func (f *FS) RemoveAll(ctx context.Context, name string) error {
+func (f *smbFS) RemoveAll(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "remove",
@@ -270,7 +274,7 @@ func (f *FS) RemoveAll(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *FS) Rename(
+func (f *smbFS) Rename(
 	ctx context.Context, oldname, newname string,
 ) error {
 	if oldname == "" || newname == "" {
@@ -351,7 +355,7 @@ func (de *dirEntry) Info() (fs.FileInfo, error) {
 func (de *dirEntry) Path() string { return "" }
 
 // Abs implements fs.AbsFS
-func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+func (f *smbFS) Abs(ctx context.Context, name string) (string, error) {
 	// If already absolute, return as-is
 	if path.IsAbs(name) {
 		return path.Clean(name), nil

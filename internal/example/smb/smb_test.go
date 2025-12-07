@@ -8,6 +8,7 @@ import (
 
 	"lesiw.io/ctrctl"
 	"lesiw.io/defers"
+	"lesiw.io/fs"
 	"lesiw.io/fs/fstest"
 )
 
@@ -35,7 +36,7 @@ func TestSMBFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create SMB filesystem: %v", err)
 	}
-	t.Cleanup(func() { _ = fsys.Close() })
+	t.Cleanup(func() { _ = fs.Close(fsys) })
 
 	ctx := t.Context()
 
