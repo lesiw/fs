@@ -10,6 +10,29 @@ import (
 )
 
 func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
+	t.Run("ReadDirDot", func(t *testing.T) {
+		testReadDirDot(ctx, t, fsys)
+	})
+	t.Run("ReadDirCurrent", func(t *testing.T) {
+		testReadDirCurrent(ctx, t, fsys, files)
+	})
+}
+
+func testReadDirDot(ctx context.Context, t *testing.T, fsys fs.FS) {
+	// Reading "." should always work on a filesystem, even if it's empty.
+	for _, err := range fs.ReadDir(ctx, fsys, ".") {
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("ReadDirFS not supported")
+			}
+			t.Fatalf(`ReadDir(".") failed: %v`, err)
+		}
+	}
+}
+
+func testReadDirCurrent(
+	ctx context.Context, t *testing.T, fsys fs.FS, files []File,
+) {
 	want := testReadDirWant(files)
 
 	var names []string
