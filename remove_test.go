@@ -11,14 +11,10 @@ import (
 )
 
 func ExampleRemove() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "delete-me.txt", []byte("temporary"))
+	err := fs.WriteFile(ctx, fsys, "delete-me.txt", []byte("temporary"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,14 +31,10 @@ func ExampleRemove() {
 }
 
 func ExampleRemoveAll() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.MkdirAll(ctx, fsys, "tree/branch/leaf")
+	err := fs.MkdirAll(ctx, fsys, "tree/branch/leaf")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,15 +10,11 @@ import (
 )
 
 func ExampleReadFile() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
 	content := []byte("Hello, World!")
-	err = fs.WriteFile(ctx, fsys, "greeting.txt", content)
+	err := fs.WriteFile(ctx, fsys, "greeting.txt", content)
 	if err != nil {
 		log.Fatal(err)
 	}

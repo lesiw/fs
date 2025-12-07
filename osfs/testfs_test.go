@@ -3,15 +3,13 @@ package osfs
 import (
 	"testing"
 
+	"lesiw.io/fs"
 	"lesiw.io/fs/fstest"
 )
 
 func TestFS(t *testing.T) {
-	fsys, err := New("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := TempFS(t.Context())
+	defer fs.Close(fsys)
 
-	fstest.TestFS(t.Context(), t, fsys)
+	fstest.TestFS(ctx, t, fsys)
 }

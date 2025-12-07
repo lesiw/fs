@@ -33,15 +33,11 @@ func TestContextModesIndependent(t *testing.T) {
 }
 
 func ExampleWithFileMode() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
 	ctx = fs.WithFileMode(ctx, 0600)
-	err = fs.WriteFile(ctx, fsys, "private.txt", []byte("secret"))
+	err := fs.WriteFile(ctx, fsys, "private.txt", []byte("secret"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,15 +51,11 @@ func ExampleWithFileMode() {
 }
 
 func ExampleWithDirMode() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
 	ctx = fs.WithDirMode(ctx, 0700)
-	err = fs.MkdirAll(ctx, fsys, "private/data")
+	err := fs.MkdirAll(ctx, fsys, "private/data")
 	if err != nil {
 		log.Fatal(err)
 	}

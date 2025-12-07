@@ -32,71 +32,97 @@ import (
 	fspath "lesiw.io/fs/path"
 )
 
-// FS implements lesiw.io/fs.FS using the OS filesystem.
+// osFS implements lesiw.io/fs.FS using the OS filesystem.
 // It supports all optional interfaces defined in lesiw.io/fs.
 //
-// FS also implements io.Closer. If the filesystem was created with an empty
-// root (which creates a temporary directory), Close() will remove the
-// temporary directory.
-type FS struct {
-	root      string
+// All paths are resolved relative to the current working directory,
+// or relative to a directory specified via fs.WithWorkDir in the context.
+//
+// osFS implements io.Closer. If created with TempFS(), Close() removes
+// the temporary directory.
+//
+// To create an osFS, use FS() or TempFS().
+type osFS struct {
 	cleanupFn func() error
 }
 
-// New creates a new OS filesystem rooted at the specified directory.
-//
-// If root is empty (""), a temporary directory is created and the filesystem
-// is rooted there. Call Close() to remove the temporary directory when done.
-//
-// If root is ".", it uses the current working directory.
-//
-// All paths are resolved relative to this root.
-//
-// Returns an error if the current working directory cannot be determined
-// when root is ".", or if a temporary directory cannot be created when root
-// is empty.
-func New(root string) (*FS, error) {
-	var cleanupFn func() error
+// FS returns a filesystem that operates on the OS filesystem.
+// All paths are resolved relative to the process's current working directory,
+// or relative to a directory specified via fs.WithWorkDir in the context.
+func FS() fs.FS {
+	return &osFS{}
+}
 
-	if root == "" {
-		// Create temporary directory
-		var err error
-		root, err = os.MkdirTemp("", "osfs-*")
-		if err != nil {
-			return nil, fmt.Errorf("creating temp directory: %w", err)
-		}
-		cleanupFn = func() error {
-			return os.RemoveAll(root)
-		}
-	} else if root == "." {
-		var err error
-		root, err = os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("getting current directory: %w", err)
-		}
+// TempFS creates a temporary directory and returns a filesystem and context.
+// The context has WorkDir set to the temporary directory, scoping all
+// operations to that directory.
+//
+// Call fs.Close() on the returned filesystem to remove the temporary
+// directory.
+//
+// TempFS never returns an error. If OS temp directory creation fails,
+// it falls back to a local randomized path that will be created on first use.
+func TempFS(ctx context.Context) (fs.FS, context.Context) {
+	fsys := &osFS{}
+
+	// Try to use OS temp directory
+	w, err := fs.Temp(ctx, fsys, "osfs-/")
+	if err == nil {
+		tmpdir := w.Path()
+		_ = w.Close()
+		fsys.cleanupFn = func() error { return os.RemoveAll(tmpdir) }
+		return fsys, fs.WithWorkDir(ctx, tmpdir)
 	}
 
-	return &FS{root: root, cleanupFn: cleanupFn}, nil
+	// Fallback: use local randomized path
+	tmpdir := fmt.Sprintf("osfs-tmp-%d", time.Now().UnixNano())
+	fsys.cleanupFn = func() error { return os.RemoveAll(tmpdir) }
+	return fsys, fs.WithWorkDir(ctx, tmpdir)
 }
 
 // resolvePath converts a relative fs path to an absolute OS path.
 // If ctx contains a working directory via fs.WorkDir(), paths are resolved
-// relative to that working directory within the filesystem root.
-func (f *FS) resolvePath(ctx context.Context, name string) (string, error) {
+// relative to that working directory.
+func (f *osFS) resolvePath(ctx context.Context, name string) (string, error) {
 	name = filepath.Clean(name)
 	if filepath.IsAbs(name) {
 		return name, nil
 	}
-	base := f.root
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		base = filepath.Join(f.root, filepath.FromSlash(workDir))
+
+	// Start from current working directory, fall back to WorkDir if Getwd
+	// fails
+	base, err := os.Getwd()
+	if err != nil {
+		// If Getwd fails, use WorkDir as the base (or empty string)
+		base = ""
 	}
+
+	// Apply WorkDir from context if present
+	if workDir := fs.WorkDir(ctx); workDir != "" {
+		workDir = filepath.FromSlash(workDir)
+		// If WorkDir is absolute, use it directly (ignore base CWD)
+		if filepath.IsAbs(workDir) {
+			base = workDir
+		} else if base != "" {
+			// WorkDir is relative, join with CWD
+			base = filepath.Join(base, workDir)
+		} else {
+			// No CWD available, use WorkDir as-is
+			base = workDir
+		}
+	}
+
+	if base == "" {
+		// No CWD and no WorkDir - just return the name as-is
+		return filepath.FromSlash(name), nil
+	}
+
 	return filepath.Join(base, filepath.FromSlash(name)), nil
 }
 
-var _ fs.FS = (*FS)(nil)
+var _ fs.FS = (*osFS)(nil)
 
-func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+func (f *osFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
@@ -104,9 +130,9 @@ func (f *FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-var _ fs.CreateFS = (*FS)(nil)
+var _ fs.CreateFS = (*osFS)(nil)
 
-func (f *FS) Create(
+func (f *osFS) Create(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
 	path, err := f.resolvePath(ctx, name)
@@ -117,9 +143,9 @@ func (f *FS) Create(
 	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 }
 
-var _ fs.AppendFS = (*FS)(nil)
+var _ fs.AppendFS = (*osFS)(nil)
 
-func (f *FS) Append(
+func (f *osFS) Append(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
 	path, err := f.resolvePath(ctx, name)
@@ -130,9 +156,9 @@ func (f *FS) Append(
 	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm)
 }
 
-var _ fs.StatFS = (*FS)(nil)
+var _ fs.StatFS = (*osFS)(nil)
 
-func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *osFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
@@ -140,9 +166,9 @@ func (f *FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	return os.Stat(path)
 }
 
-var _ fs.ReadDirFS = (*FS)(nil)
+var _ fs.ReadDirFS = (*osFS)(nil)
 
-func (f *FS) ReadDir(
+func (f *osFS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
@@ -190,9 +216,9 @@ func (de *dirEntry) Type() fs.Mode              { return de.typ }
 func (de *dirEntry) Info() (fs.FileInfo, error) { return de.info, nil }
 func (de *dirEntry) Path() string               { return "" }
 
-var _ fs.RemoveFS = (*FS)(nil)
+var _ fs.RemoveFS = (*osFS)(nil)
 
-func (f *FS) Remove(ctx context.Context, name string) error {
+func (f *osFS) Remove(ctx context.Context, name string) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
@@ -200,9 +226,9 @@ func (f *FS) Remove(ctx context.Context, name string) error {
 	return os.Remove(path)
 }
 
-var _ fs.MkdirFS = (*FS)(nil)
+var _ fs.MkdirFS = (*osFS)(nil)
 
-func (f *FS) Mkdir(ctx context.Context, name string) error {
+func (f *osFS) Mkdir(ctx context.Context, name string) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
@@ -211,9 +237,9 @@ func (f *FS) Mkdir(ctx context.Context, name string) error {
 	return os.Mkdir(path, perm)
 }
 
-var _ fs.RenameFS = (*FS)(nil)
+var _ fs.RenameFS = (*osFS)(nil)
 
-func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
+func (f *osFS) Rename(ctx context.Context, oldname, newname string) error {
 	oldpath, err := f.resolvePath(ctx, oldname)
 	if err != nil {
 		return err
@@ -225,9 +251,9 @@ func (f *FS) Rename(ctx context.Context, oldname, newname string) error {
 	return os.Rename(oldpath, newpath)
 }
 
-var _ fs.TruncateFS = (*FS)(nil)
+var _ fs.TruncateFS = (*osFS)(nil)
 
-func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
+func (f *osFS) Truncate(ctx context.Context, name string, size int64) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err
@@ -235,9 +261,9 @@ func (f *FS) Truncate(ctx context.Context, name string, size int64) error {
 	return os.Truncate(path, size)
 }
 
-var _ fs.ChtimesFS = (*FS)(nil)
+var _ fs.ChtimesFS = (*osFS)(nil)
 
-func (f *FS) Chtimes(
+func (f *osFS) Chtimes(
 	ctx context.Context, name string, atime, mtime time.Time,
 ) error {
 	path, err := f.resolvePath(ctx, name)
@@ -247,9 +273,9 @@ func (f *FS) Chtimes(
 	return os.Chtimes(path, atime, mtime)
 }
 
-var _ fs.SymlinkFS = (*FS)(nil)
+var _ fs.SymlinkFS = (*osFS)(nil)
 
-func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
+func (f *osFS) Symlink(ctx context.Context, oldname, newname string) error {
 	newpath, err := f.resolvePath(ctx, newname)
 	if err != nil {
 		return err
@@ -259,9 +285,9 @@ func (f *FS) Symlink(ctx context.Context, oldname, newname string) error {
 	return os.Symlink(oldname, newpath)
 }
 
-var _ fs.ReadLinkFS = (*FS)(nil)
+var _ fs.ReadLinkFS = (*osFS)(nil)
 
-func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
+func (f *osFS) ReadLink(ctx context.Context, name string) (string, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return "", err
@@ -269,7 +295,7 @@ func (f *FS) ReadLink(ctx context.Context, name string) (string, error) {
 	return os.Readlink(path)
 }
 
-func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
+func (f *osFS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
@@ -277,9 +303,9 @@ func (f *FS) Lstat(ctx context.Context, name string) (fs.FileInfo, error) {
 	return os.Lstat(path)
 }
 
-var _ fs.LocalizeFS = (*FS)(nil)
+var _ fs.LocalizeFS = (*osFS)(nil)
 
-func (f *FS) Localize(ctx context.Context, path string) (string, error) {
+func (f *osFS) Localize(ctx context.Context, path string) (string, error) {
 	return localizePath(path)
 }
 
@@ -309,15 +335,15 @@ func localizePath(p string) (string, error) {
 	return filepath.Localize(p)
 }
 
-var _ fs.AbsFS = (*FS)(nil)
+var _ fs.AbsFS = (*osFS)(nil)
 
-func (f *FS) Abs(ctx context.Context, name string) (string, error) {
+func (f *osFS) Abs(ctx context.Context, name string) (string, error) {
 	// If already absolute, return as-is
 	if filepath.IsAbs(name) {
 		return filepath.Clean(name), nil
 	}
 
-	// Resolve relative to root + WorkDir
+	// Resolve relative to CWD + WorkDir
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return "", err
@@ -326,9 +352,9 @@ func (f *FS) Abs(ctx context.Context, name string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-var _ fs.RelFS = (*FS)(nil)
+var _ fs.RelFS = (*osFS)(nil)
 
-func (f *FS) Rel(
+func (f *osFS) Rel(
 	ctx context.Context, basepath, targpath string,
 ) (string, error) {
 	// Use filepath.Rel for OS-specific path handling
@@ -340,12 +366,12 @@ func (f *FS) Rel(
 	return filepath.ToSlash(rel), nil
 }
 
-var _ io.Closer = (*FS)(nil)
+var _ io.Closer = (*osFS)(nil)
 
 // Close removes the temporary directory if this filesystem was created with
-// New(""). If the filesystem was created with a specific root directory,
-// Close does nothing and returns nil.
-func (f *FS) Close() error {
+// TempFS(). If the filesystem was created with FS(), Close does nothing and
+// returns nil.
+func (f *osFS) Close() error {
 	if f.cleanupFn != nil {
 		return f.cleanupFn()
 	}

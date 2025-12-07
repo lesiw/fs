@@ -12,14 +12,10 @@ import (
 )
 
 func ExampleChmod() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "perms.txt", []byte("data"))
+	err := fs.WriteFile(ctx, fsys, "perms.txt", []byte("data"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,14 +10,10 @@ import (
 )
 
 func ExampleRename() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "old-name.txt", []byte("content"))
+	err := fs.WriteFile(ctx, fsys, "old-name.txt", []byte("content"))
 	if err != nil {
 		log.Fatal(err)
 	}

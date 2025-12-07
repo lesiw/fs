@@ -10,12 +10,8 @@ import (
 )
 
 func ExampleGlob() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
 	files := []string{"test1.txt", "test2.txt", "data.csv"}
 	for _, name := range files {

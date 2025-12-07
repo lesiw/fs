@@ -12,14 +12,10 @@ import (
 )
 
 func ExampleOpen_directory() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.MkdirAll(ctx, fsys, "project/src")
+	err := fs.MkdirAll(ctx, fsys, "project/src")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,14 +44,10 @@ func ExampleOpen_directory() {
 }
 
 func ExampleCreate_directory() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.MkdirAll(ctx, fsys, "source/data")
+	err := fs.MkdirAll(ctx, fsys, "source/data")
 	if err != nil {
 		log.Fatal(err)
 	}

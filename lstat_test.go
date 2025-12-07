@@ -10,14 +10,10 @@ import (
 )
 
 func ExampleLstat() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "target.txt", []byte("content"))
+	err := fs.WriteFile(ctx, fsys, "target.txt", []byte("content"))
 	if err != nil {
 		log.Fatal(err)
 	}

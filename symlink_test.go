@@ -10,14 +10,10 @@ import (
 )
 
 func ExampleSymlink() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "original.txt", []byte("content"))
+	err := fs.WriteFile(ctx, fsys, "original.txt", []byte("content"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,14 +31,10 @@ func ExampleSymlink() {
 }
 
 func ExampleReadLink() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.Symlink(ctx, fsys, "target.txt", "link.txt")
+	err := fs.Symlink(ctx, fsys, "target.txt", "link.txt")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,14 +10,10 @@ import (
 )
 
 func ExampleAppend() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "log.txt", []byte("first line\n"))
+	err := fs.WriteFile(ctx, fsys, "log.txt", []byte("first line\n"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -11,14 +11,10 @@ import (
 )
 
 func ExampleOpen() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.WriteFile(ctx, fsys, "data.txt", []byte("example content"))
+	err := fs.WriteFile(ctx, fsys, "data.txt", []byte("example content"))
 	if err != nil {
 		log.Fatal(err)
 	}

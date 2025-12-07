@@ -10,14 +10,10 @@ import (
 )
 
 func ExampleWalk_singleLevel() {
-	ctx := context.Background()
-	fsys, err := osfs.New("")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer fsys.Close()
+	fsys, ctx := osfs.TempFS(context.Background())
+	defer fs.Close(fsys)
 
-	err = fs.Mkdir(ctx, fsys, "testdir")
+	err := fs.Mkdir(ctx, fsys, "testdir")
 	if err != nil {
 		log.Fatal(err)
 	}
