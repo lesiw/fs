@@ -38,6 +38,8 @@ go get lesiw.io/fs
 
 ## Quick Start
 
+[▶️ Run this example on the Go Playground](https://go.dev/play/p/t1XkaEJiL20)
+
 Write and read files with context support for cancellation and timeouts:
 
 ```go
@@ -52,12 +54,8 @@ import (
 )
 
 func main() {
-    ctx := context.Background()
-    fsys, err := osfs.New("")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer fsys.Close()
+    fsys, ctx := osfs.TempFS(context.Background())
+    defer fs.Close(fsys)
 
     // Write a file
     data := []byte("Hello, world!")
