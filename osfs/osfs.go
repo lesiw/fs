@@ -321,6 +321,11 @@ func localizePath(p string) (string, error) {
 		return p, nil
 	}
 
+	// If path is absolute, it's already in OS format - return as-is
+	if filepath.IsAbs(p) {
+		return p, nil
+	}
+
 	// Check if this is a directory path
 	if fspath.IsDir(p) {
 		dir := fspath.Dir(p)
@@ -364,6 +369,27 @@ func (f *osFS) Rel(
 	}
 	// Convert to forward slashes for fs consistency
 	return filepath.ToSlash(rel), nil
+}
+
+var _ fs.TempFS = (*osFS)(nil)
+
+func (f *osFS) Temp(ctx context.Context, name string) (string, error) {
+	file, err := os.CreateTemp("", name+"-")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	return filepath.ToSlash(file.Name()), nil
+}
+
+var _ fs.TempDirFS = (*osFS)(nil)
+
+func (f *osFS) TempDir(ctx context.Context, name string) (string, error) {
+	dir, err := os.MkdirTemp("", name+"-")
+	if err != nil {
+		return "", err
+	}
+	return filepath.ToSlash(dir), nil
 }
 
 var _ io.Closer = (*osFS)(nil)
