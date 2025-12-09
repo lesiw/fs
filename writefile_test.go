@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleWriteFile() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	data := []byte("Hello, filesystem!")

@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleRename() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "old-name.txt", []byte("content"))

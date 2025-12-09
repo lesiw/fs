@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleReadFile() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	content := []byte("Hello, World!")

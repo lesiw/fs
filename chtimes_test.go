@@ -11,7 +11,7 @@ import (
 )
 
 func ExampleChtimes() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "timestamps.txt", []byte("data"))

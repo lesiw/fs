@@ -8,7 +8,7 @@ import (
 )
 
 func TestFS(t *testing.T) {
-	fsys, ctx := TempFS(t.Context())
+	fsys, ctx := TempFS(), t.Context()
 	defer fs.Close(fsys)
 
 	fstest.TestFS(ctx, t, fsys)

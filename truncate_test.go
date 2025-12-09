@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleTruncate() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "shrink.txt", []byte("Hello, World!"))

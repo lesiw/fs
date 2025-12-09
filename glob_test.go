@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleGlob() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	files := []string{"test1.txt", "test2.txt", "data.csv"}

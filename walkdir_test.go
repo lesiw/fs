@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleWalk_recursive() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.MkdirAll(ctx, fsys, "walk/sub")

@@ -43,6 +43,7 @@ import (
 //
 // To create an osFS, use FS() or TempFS().
 type osFS struct {
+	cwd       string         // virtual CWD (empty for FS(), set for TempFS())
 	cleanupFn func() error
 }
 
@@ -53,31 +54,30 @@ func FS() fs.FS {
 	return &osFS{}
 }
 
-// TempFS creates a temporary directory and returns a filesystem and context.
-// The context has WorkDir set to the temporary directory, scoping all
-// operations to that directory.
+// TempFS creates a temporary directory and returns a filesystem with its
+// virtual working directory set to the temp directory.
 //
 // Call fs.Close() on the returned filesystem to remove the temporary
 // directory.
 //
 // TempFS never returns an error. If OS temp directory creation fails,
 // it falls back to a local randomized path that will be created on first use.
-func TempFS(ctx context.Context) (fs.FS, context.Context) {
+func TempFS() fs.FS {
 	fsys := &osFS{}
 
 	// Try to use OS temp directory
-	w, err := fs.Temp(ctx, fsys, "osfs-/")
+	tmpdir, err := os.MkdirTemp("", "osfs-")
 	if err == nil {
-		tmpdir := w.Path()
-		_ = w.Close()
+		fsys.cwd = tmpdir
 		fsys.cleanupFn = func() error { return os.RemoveAll(tmpdir) }
-		return fsys, fs.WithWorkDir(ctx, tmpdir)
+		return fsys
 	}
 
 	// Fallback: use local randomized path
-	tmpdir := fmt.Sprintf("osfs-tmp-%d", time.Now().UnixNano())
+	tmpdir = fmt.Sprintf("osfs-tmp-%d", time.Now().UnixNano())
+	fsys.cwd = tmpdir
 	fsys.cleanupFn = func() error { return os.RemoveAll(tmpdir) }
-	return fsys, fs.WithWorkDir(ctx, tmpdir)
+	return fsys
 }
 
 // resolvePath converts a relative fs path to an absolute OS path.
@@ -89,12 +89,15 @@ func (f *osFS) resolvePath(ctx context.Context, name string) (string, error) {
 		return name, nil
 	}
 
-	// Start from current working directory, fall back to WorkDir if Getwd
-	// fails
-	base, err := os.Getwd()
-	if err != nil {
-		// If Getwd fails, use WorkDir as the base (or empty string)
-		base = ""
+	// Start with virtual CWD if set (for TempFS), otherwise use os.Getwd()
+	base := f.cwd
+	if base == "" {
+		var err error
+		base, err = os.Getwd()
+		if err != nil {
+			// If Getwd fails, use empty base
+			base = ""
+		}
 	}
 
 	// Apply WorkDir from context if present

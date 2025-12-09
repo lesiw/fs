@@ -33,7 +33,7 @@ func TestContextModesIndependent(t *testing.T) {
 }
 
 func ExampleWithFileMode() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	ctx = fs.WithFileMode(ctx, 0600)
@@ -51,7 +51,7 @@ func ExampleWithFileMode() {
 }
 
 func ExampleWithDirMode() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	ctx = fs.WithDirMode(ctx, 0700)

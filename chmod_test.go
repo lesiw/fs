@@ -12,7 +12,7 @@ import (
 )
 
 func ExampleChmod() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "perms.txt", []byte("data"))

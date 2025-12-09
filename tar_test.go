@@ -12,7 +12,7 @@ import (
 )
 
 func ExampleOpen_directory() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.MkdirAll(ctx, fsys, "project/src")
@@ -44,7 +44,7 @@ func ExampleOpen_directory() {
 }
 
 func ExampleCreate_directory() {
-	fsys, ctx := osfs.TempFS(context.Background())
+	fsys, ctx := osfs.TempFS(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.MkdirAll(ctx, fsys, "source/data")
