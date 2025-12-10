@@ -91,12 +91,24 @@ func Split(path string) (dir, file string) {
 		return
 	}
 
-	// Find last separator
-	i := strings.LastIndex(path, sep)
+	// For URL-style paths, skip the :// when finding the last separator
+	searchStart := 0
+	if style.kind == styleURL {
+		if protoEnd := strings.Index(path, "://"); protoEnd >= 0 {
+			searchStart = protoEnd + 3
+		}
+	}
+
+	// Find last separator (after searchStart for URLs)
+	i := strings.LastIndex(path[searchStart:], sep)
 	if i < 0 {
-		// No separator - entire path is the file
+		// No separator found (or path is a URL root without trailing slash)
+		if isRoot(path, style) {
+			return path, ""
+		}
 		return "", path
 	}
+	i += searchStart
 
 	dir = path[:i+1] // Include the separator temporarily
 	file = path[i+1:]
@@ -368,19 +380,39 @@ func isRoot(path string, style pathStyle) bool {
 		// C:\, D:\, etc.
 		return len(path) == 3 && path[1] == ':' && path[2] == '\\'
 	case styleURL:
-		// Must end with / and have ://
-		if !strings.HasSuffix(path, "/") {
-			return false
-		}
 		protoEnd := strings.Index(path, "://")
 		if protoEnd < 0 {
 			return false
 		}
-		// Root is protocol://host/
 		rest := path[protoEnd+3:]
-		return strings.Count(rest, "/") == 1
+		slashCount := strings.Count(rest, "/")
+		if slashCount == 0 {
+			return true
+		}
+		return slashCount == 1 && strings.HasSuffix(path, "/")
 	}
 	return false
+}
+
+func splitAll(path string) []string {
+	if path == "" {
+		return nil
+	}
+	var result []string
+	for path != "" {
+		dir, file := Split(path)
+		if file != "" {
+			result = append([]string{file}, result...)
+		}
+		if dir == path {
+			if dir != "" {
+				result = append([]string{dir}, result...)
+			}
+			break
+		}
+		path = dir
+	}
+	return result
 }
 
 // joinParts joins path parts according to the style
@@ -390,6 +422,12 @@ func joinParts(parts []string, style pathStyle) string {
 	}
 
 	sep := string(style.sep)
+
+	var allParts []string
+	for _, part := range parts {
+		allParts = append(allParts, splitAll(part)...)
+	}
+	parts = allParts
 
 	switch style.kind {
 	case styleURL:

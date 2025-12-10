@@ -28,16 +28,21 @@ func TestJoin(t *testing.T) {
 		{"WindowsNested", []string{`C:\`, "Users", "foo"}, `C:\Users\foo`},
 		{"WindowsTrailing", []string{`C:\`, "foo", ""}, `C:\foo\`},
 		{"WindowsBackslash", []string{`foo\bar`, "baz"}, `foo\bar\baz`},
-		{"WindowsMixed", []string{`C:\foo`, "bar"}, `C:\foo\bar`},
+		{"WindowsMixed", []string{`C:\foo`, "bar/baz"}, `C:\foo\bar\baz`},
 		{"WindowsLocalDot", []string{`.\foo`, "bar"}, `.\foo\bar`},
 		{"WindowsLocalDotNested", []string{`.\foo`, `.\bar`}, `.\foo\bar`},
 
 		// URL-style paths
-		{"URLSimple", []string{"https://example.com", "foo"}, "https://example.com/foo"},
-		{"URLNested", []string{"https://example.com", "foo", "bar"}, "https://example.com/foo/bar"},
-		{"URLTrailing", []string{"https://example.com/foo", ""}, "https://example.com/foo/"},
-		{"URLS3", []string{"s3://bucket", "key", "path"}, "s3://bucket/key/path"},
-		{"URLFile", []string{"file:///", "home", "user"}, "file:///home/user"},
+		{"URLSimple", []string{"https://example.com", "foo"},
+			"https://example.com/foo"},
+		{"URLNested", []string{"https://example.com", "foo", "bar"},
+			"https://example.com/foo/bar"},
+		{"URLTrailing", []string{"https://example.com/foo", ""},
+			"https://example.com/foo/"},
+		{"URLS3", []string{"s3://bucket", "key", "path"},
+			"s3://bucket/key/path"},
+		{"URLFile", []string{"file:///", "home", "user"},
+			"file:///home/user"},
 	}
 
 	for _, tt := range tests {
@@ -77,9 +82,14 @@ func TestSplit(t *testing.T) {
 		{"WindowsLocalDotPath", `.\foo\bar`, `.\foo`, "bar"},
 
 		// URL-style
-		{"URLPath", "https://example.com/foo", "https://example.com/", "foo"},
-		{"URLNested", "https://example.com/foo/bar", "https://example.com/foo", "bar"},
-		{"URLRoot", "https://example.com/", "https://example.com/", ""},
+		{"URLPath", "https://example.com/foo",
+			"https://example.com/", "foo"},
+		{"URLNested", "https://example.com/foo/bar",
+			"https://example.com/foo", "bar"},
+		{"URLRoot", "https://example.com/",
+			"https://example.com/", ""},
+		{"URLRootNoSlash", "https://example.com",
+			"https://example.com", ""},
 	}
 
 	for _, tt := range tests {
@@ -190,8 +200,10 @@ func TestIsRoot(t *testing.T) {
 		{`C:\foo`, false},
 		{`D:\`, true},
 		{"https://example.com/", true},
+		{"https://example.com", true},
 		{"https://example.com/foo", false},
 		{"s3://bucket/", true},
+		{"s3://bucket", true},
 		{"file:///", true},
 		{"", false},
 	}
@@ -281,11 +293,16 @@ func TestClean(t *testing.T) {
 		{"WindowsLocalDotDot", `.\foo\..\bar`, `.\bar`},
 
 		// URL-style
-		{"URLSimple", "https://example.com/foo/bar", "https://example.com/foo/bar"},
-		{"URLDot", "https://example.com/foo/./bar", "https://example.com/foo/bar"},
-		{"URLDotDot", "https://example.com/foo/../bar", "https://example.com/bar"},
-		{"URLRootEscape", "https://example.com/..", "https://example.com/"},
-		{"URLRootEscape2", "https://example.com/../foo", "https://example.com/foo"},
+		{"URLSimple", "https://example.com/foo/bar",
+			"https://example.com/foo/bar"},
+		{"URLDot", "https://example.com/foo/./bar",
+			"https://example.com/foo/bar"},
+		{"URLDotDot", "https://example.com/foo/../bar",
+			"https://example.com/bar"},
+		{"URLRootEscape", "https://example.com/..",
+			"https://example.com/"},
+		{"URLRootEscape2", "https://example.com/../foo",
+			"https://example.com/foo"},
 	}
 
 	for _, tt := range tests {

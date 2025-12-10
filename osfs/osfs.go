@@ -382,7 +382,7 @@ func (f *osFS) Temp(ctx context.Context, name string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	return filepath.ToSlash(file.Name()), nil
+	return file.Name(), nil
 }
 
 var _ fs.TempDirFS = (*osFS)(nil)
@@ -392,7 +392,7 @@ func (f *osFS) TempDir(ctx context.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.ToSlash(dir), nil
+	return dir, nil
 }
 
 var _ io.Closer = (*osFS)(nil)

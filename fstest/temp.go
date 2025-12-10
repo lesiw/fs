@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
 func testTemp(ctx context.Context, t *testing.T, fsys fs.FS) {
@@ -158,6 +159,28 @@ func testTempDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 				"Temp(%q) created duplicate names: %q",
 				prefix, w1.Path(),
 			)
+		}
+	})
+
+	t.Run("PathSeparators", func(t *testing.T) {
+		prefix := "test_separators/"
+		w, err := fs.Temp(ctx, fsys, prefix)
+		if err != nil {
+			if errors.Is(err, fs.ErrUnsupported) {
+				t.Skip("Temp not supported")
+			}
+			t.Fatalf("Temp(%q) err: %v", prefix, err)
+		}
+		w.Close()
+		cleanup(ctx, t, fsys, w.Path())
+
+		name := path.Join(w.Path(), "foo/bar.txt")
+
+		hasForward := strings.ContainsRune(name, '/')
+		hasBackward := strings.ContainsRune(name, '\\')
+		if hasForward && hasBackward {
+			t.Errorf("path.Join(%q, %q) returned %q "+
+				"with mixed separators", w.Path(), "foo/bar.txt", name)
 		}
 	})
 }
