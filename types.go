@@ -184,8 +184,9 @@
 //
 //   - [Append] falls back to [Open] and [Create] when [AppendFS] is not
 //     implemented.
-//   - [Truncate] falls back to creating an empty file when [TruncateFS]
-//     is not implemented.
+//   - [Truncate] falls back to creating an empty file when size is 0, or
+//     reading, removing, and recreating the file with adjusted size for
+//     non-zero sizes, when [TruncateFS] is not implemented.
 //   - [ReadDir] calls [Walk] with depth 1 when [ReadDirFS] is not implemented.
 //   - [Walk] recursively calls [ReadDir] when [WalkFS] is not implemented.
 //   - [TempDir] creates directories with random names when [TempFS] is

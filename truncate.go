@@ -75,6 +75,26 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 func recreateTruncate(
 	ctx context.Context, fsys FS, name string, size int64,
 ) error {
+	// Special case: size 0 means create empty file
+	if size == 0 {
+		if err := Remove(ctx, fsys, name); err != nil {
+			return &PathError{
+				Op:   "truncate",
+				Path: name,
+				Err:  err,
+			}
+		}
+		w, err := Create(ctx, fsys, name)
+		if err != nil {
+			return &PathError{
+				Op:   "truncate",
+				Path: name,
+				Err:  err,
+			}
+		}
+		return w.Close()
+	}
+
 	f, err := Open(ctx, fsys, name)
 	if err != nil {
 		return &PathError{
@@ -121,14 +141,12 @@ func recreateTruncate(
 			Err:  err,
 		}
 	}
-	if len(content) > 0 {
-		if _, err := w.Write(content); err != nil {
-			_ = w.Close()
-			return &PathError{
-				Op:   "truncate",
-				Path: name,
-				Err:  err,
-			}
+	if _, err := w.Write(content); err != nil {
+		_ = w.Close()
+		return &PathError{
+			Op:   "truncate",
+			Path: name,
+			Err:  err,
 		}
 	}
 	return w.Close()

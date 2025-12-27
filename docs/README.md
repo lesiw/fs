@@ -124,6 +124,7 @@ When native support is unavailable, operations may provide fallback implementati
 
 * `Append` falls back to opening the file and seeking to the end when unsupported.
 * `Rename` falls back to copying and deleting when unsupported.
+* `Truncate` falls back to creating an empty file (size 0) or reading, removing, and recreating the file with adjusted size (non-zero) when unsupported.
 * `ReadDir` calls `Walk` with depth 1 when unsupported.
 * `Walk` recursively calls `ReadDir` when unsupported.
 * `TempDir` creates directories with random names when unsupported.
