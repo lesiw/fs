@@ -42,7 +42,7 @@ type AbsFS interface {
 //
 // Requires: [AbsFS] || (absolute [WorkDir] in ctx)
 //
-// Similar capabilities: [filepath.Abs], realpath, pwd.
+// Similar capabilities: [path/filepath.Abs], realpath, pwd.
 func Abs(ctx context.Context, fsys FS, name string) (string, error) {
 	// Try native capability first
 	if afs, ok := fsys.(AbsFS); ok {

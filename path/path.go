@@ -161,8 +161,8 @@ func IsRoot(path string) bool {
 // IsAbs reports whether the path is lexically absolute.
 // Absolute paths include:
 //   - Paths starting with "/" (Unix-style)
-//   - Paths starting with [letter]:\ or [letter]:/ (Windows-style)
-//   - Paths starting with [protocol]:// (URL-style)
+//   - Paths starting with drive letter (C:\, D:\, etc.) (Windows-style)
+//   - Paths starting with protocol:// (https://, s3://, etc.) (URL-style)
 func IsAbs(path string) bool {
 	if path == "" {
 		return false

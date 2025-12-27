@@ -26,7 +26,7 @@ type RelFS interface {
 // itself. On success, the returned path will always be relative to basepath,
 // even if basepath and targpath share no elements.
 //
-// Analogous to: [filepath.Rel], realpath --relative-to.
+// Analogous to: [path/filepath.Rel], realpath --relative-to.
 //
 // An error is returned if targpath can't be made relative to basepath.
 //
