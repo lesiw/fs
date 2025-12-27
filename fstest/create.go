@@ -23,12 +23,12 @@ func testCreate(ctx context.Context, t *testing.T, fsys fs.FS) {
 		testWriteFile(ctx, t, fsys)
 	})
 
-	t.Run("ImplicitMkdir", func(t *testing.T) {
-		testImplicitMkdir(ctx, t, fsys)
+	t.Run("VirtualDirectories", func(t *testing.T) {
+		testVirtualDirectories(ctx, t, fsys)
 	})
 
-	t.Run("ImplicitMkdirWithMode", func(t *testing.T) {
-		testImplicitMkdirWithMode(ctx, t, fsys)
+	t.Run("VirtualDirectoriesWithMode", func(t *testing.T) {
+		testVirtualDirectoriesWithMode(ctx, t, fsys)
 	})
 }
 
@@ -170,23 +170,23 @@ func testWriteFile(
 	})
 }
 
-func testImplicitMkdir(
+func testVirtualDirectories(
 	ctx context.Context, t *testing.T, fsys fs.FS,
 ) {
 	_, hasMkdirFS := fsys.(fs.MkdirFS)
 	if !hasMkdirFS {
-		t.Skip("MkdirFS not supported (required for implicit mkdir)")
+		t.Skip("MkdirFS not supported (required for virtual directories)")
 	}
 
 	t.Run("WriteFileCreatesParent", func(t *testing.T) {
 		name := "auto_dir/nested/file.txt"
-		testData := []byte("implicit mkdir test")
+		testData := []byte("virtual directories test")
 
 		if err := fs.WriteFile(ctx, fsys, name, testData); err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")
 			}
-			t.Fatalf("WriteFile(%q) with implicit mkdir: %v", name, err)
+			t.Fatalf("WriteFile(%q) with virtual directories: %v", name, err)
 		}
 		cleanup(ctx, t, fsys, "auto_dir")
 
@@ -202,7 +202,7 @@ func testImplicitMkdir(
 		info, err := fs.Stat(ctx, fsys, "auto_dir/nested")
 		if err != nil {
 			if !errors.Is(err, fs.ErrUnsupported) {
-				t.Errorf("Stat(%q) after implicit mkdir: %v",
+				t.Errorf("Stat(%q) after virtual directories: %v",
 					"auto_dir/nested", err)
 			}
 		} else if !info.IsDir() {
@@ -217,27 +217,27 @@ func testImplicitMkdir(
 			if errors.Is(err, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")
 			}
-			t.Fatalf("Create(%q) with implicit mkdir: %v", name, err)
+			t.Fatalf("Create(%q) with virtual directories: %v", name, err)
 		}
 		cleanup(ctx, t, fsys, "auto_dir2")
 
 		_, writeErr := f.Write([]byte("created"))
 		closeErr := f.Close()
 		if writeErr != nil {
-			t.Fatalf("Write after implicit mkdir: %v", writeErr)
+			t.Fatalf("Write after virtual directories: %v", writeErr)
 		}
 		if closeErr != nil {
-			t.Fatalf("Close after implicit mkdir: %v", closeErr)
+			t.Fatalf("Close after virtual directories: %v", closeErr)
 		}
 	})
 }
 
-func testImplicitMkdirWithMode(
+func testVirtualDirectoriesWithMode(
 	ctx context.Context, t *testing.T, fsys fs.FS,
 ) {
 	_, hasMkdirFS := fsys.(fs.MkdirFS)
 	if !hasMkdirFS {
-		t.Skip("MkdirFS not supported (required for implicit mkdir)")
+		t.Skip("MkdirFS not supported (required for virtual directories)")
 	}
 
 	t.Run("CustomDirMode", func(t *testing.T) {

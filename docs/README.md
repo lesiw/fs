@@ -10,7 +10,7 @@ A filesystem abstraction for Go that extends io/fs with write operations and con
 * **Full read/write capabilities** via optional interfaces beyond io/fs's read-only model.
 * **Standard io interfaces:** Returns `io.ReadCloser` and `io.WriteCloser`, not custom File types.
 * **Bulk operations** with tar streams for efficient directory transfers over high-latency connections.
-* **Implicit directory creation** to simplify writing nested paths across different storage backends.
+* **Virtual directories** to simplify writing nested paths across different storage backends.
 * **Fallback implementations** provide compatibility when native operations aren't available.
 * **Range-over-func iterators** for natural error handling and early termination in directory traversals.
 
@@ -27,7 +27,7 @@ A filesystem abstraction for Go that extends io/fs with write operations and con
 | **Fallback implementations** | ✅ | ❌ | ✅ |
 | **Context support** | ❌ | ❌ | ✅ |
 | **Bulk operations (tar)** | ❌ | ❌ | ✅ |
-| **Implicit mkdir** | ❌ | ❌ | ✅ |
+| **Virtual directories** | ❌ | ❌ | ✅ |
 | **Range-over-func iterators** | ❌ | ❌ | ✅ |
 
 ## Installation
@@ -148,7 +148,7 @@ When native support is unavailable, operations may provide fallback implementati
 
 These fallbacks maintain code portability across implementations while allowing native optimizations.
 
-## Implicit Mkdir
+## Virtual Directories
 
 Write files to nested paths without manually creating parent directories:
 
@@ -160,7 +160,7 @@ ctx = fs.WithDirMode(ctx, 0700)
 fs.WriteFile(ctx, fsys, "logs/2025/app.log", data)
 ```
 
-**Why?** Object stores like S3 use virtual directories (treating paths as object keys), while traditional filesystems require explicit directory creation. Implicit Mkdir works seamlessly across both—traditional filesystems create parent directories with the specified mode before writing files, while object stores ignore directory creation and file modes since they're not supported.
+**Why?** Object stores like S3 use virtual directories (treating paths as object keys), while traditional filesystems require explicit directory creation. Virtual directories work seamlessly across both—traditional filesystems create parent directories with the specified mode before writing files, while object stores ignore directory creation and file modes since they're not supported.
 
 Context carries file permissions through multiple API calls within a single operation chain—similar to request-scoped credentials or deadlines—without expanding function signatures.
 

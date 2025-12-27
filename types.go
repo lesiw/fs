@@ -62,7 +62,7 @@
 //
 // Object stores typically don't need this feature because they can create
 // files at arbitrarily nested paths without directory creation. However,
-// the implicit Mkdir pattern works across both traditional filesystems and
+// the virtual directory pattern works across both traditional filesystems and
 // object stores,
 // simplifying code portability.
 //
