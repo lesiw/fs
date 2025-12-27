@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleAppend() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "log.txt", []byte("first line\n"))

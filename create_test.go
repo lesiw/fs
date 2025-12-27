@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleCreate() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	f, err := fs.Create(ctx, fsys, "newfile.txt")

@@ -38,31 +38,31 @@ import (
 // All paths are resolved relative to the current working directory,
 // or relative to a directory specified via fs.WithWorkDir in the context.
 //
-// osFS implements io.Closer. If created with TempFS(), Close() removes
+// osFS implements io.Closer. If created with NewTemp(), Close() removes
 // the temporary directory.
 //
-// To create an osFS, use FS() or TempFS().
+// To create an osFS, use New() or NewTemp().
 type osFS struct {
-	cwd       string         // virtual CWD (empty for FS(), set for TempFS())
+	cwd       string // virtual CWD (empty for New(), set for NewTemp())
 	cleanupFn func() error
 }
 
-// FS returns a filesystem that operates on the OS filesystem.
+// New returns a filesystem that operates on the OS filesystem.
 // All paths are resolved relative to the process's current working directory,
 // or relative to a directory specified via fs.WithWorkDir in the context.
-func FS() fs.FS {
+func New() fs.FS {
 	return &osFS{}
 }
 
-// TempFS creates a temporary directory and returns a filesystem with its
+// NewTemp creates a temporary directory and returns a filesystem with its
 // virtual working directory set to the temp directory.
 //
 // Call fs.Close() on the returned filesystem to remove the temporary
 // directory.
 //
-// TempFS never returns an error. If OS temp directory creation fails,
+// NewTemp never returns an error. If OS temp directory creation fails,
 // it falls back to a local randomized path that will be created on first use.
-func TempFS() fs.FS {
+func NewTemp() fs.FS {
 	fsys := &osFS{}
 
 	// Try to use OS temp directory
@@ -398,7 +398,7 @@ func (f *osFS) TempDir(ctx context.Context, name string) (string, error) {
 var _ io.Closer = (*osFS)(nil)
 
 // Close removes the temporary directory if this filesystem was created with
-// TempFS(). If the filesystem was created with FS(), Close does nothing and
+// NewTemp(). If the filesystem was created with New(), Close does nothing and
 // returns nil.
 func (f *osFS) Close() error {
 	if f.cleanupFn != nil {

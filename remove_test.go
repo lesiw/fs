@@ -11,7 +11,7 @@ import (
 )
 
 func ExampleRemove() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "delete-me.txt", []byte("temporary"))
@@ -31,7 +31,7 @@ func ExampleRemove() {
 }
 
 func ExampleRemoveAll() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.MkdirAll(ctx, fsys, "tree/branch/leaf")

@@ -11,7 +11,7 @@ import (
 )
 
 func ExampleOpen() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.WriteFile(ctx, fsys, "data.txt", []byte("example content"))

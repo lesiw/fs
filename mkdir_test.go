@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleMkdir() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.Mkdir(ctx, fsys, "mydir")
@@ -27,7 +27,7 @@ func ExampleMkdir() {
 }
 
 func ExampleMkdirAll() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	err := fs.MkdirAll(ctx, fsys, "path/to/nested/dir")

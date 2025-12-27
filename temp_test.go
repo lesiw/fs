@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleTemp_dir() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	// Create temp directory (trailing slash indicates directory)
@@ -41,7 +41,7 @@ func ExampleTemp_dir() {
 }
 
 func ExampleTemp_file() {
-	fsys, ctx := osfs.TempFS(), context.Background()
+	fsys, ctx := osfs.NewTemp(), context.Background()
 	defer fs.Close(fsys)
 
 	// Create temp file (no trailing slash)
