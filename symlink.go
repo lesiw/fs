@@ -71,7 +71,7 @@ func ReadLink(ctx context.Context, fsys FS, name string) (string, error) {
 }
 
 // Lstat returns FileInfo describing the named file.
-// Analogous to: [os.Lstat], stat -L, ls -l (on symlink itself).
+// Analogous to: [os.Lstat], stat (without -L).
 // If the file is a symbolic link, the returned FileInfo describes the
 // symbolic link. Lstat makes no attempt to follow the link.
 //

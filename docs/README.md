@@ -38,7 +38,7 @@ go get lesiw.io/fs
 
 ## Quick Start
 
-[▶️ Run this example on the Go Playground](https://go.dev/play/p/l5KDoYfJyH6)
+[▶️ Run this example on the Go Playground](https://go.dev/play/p/c2sE72n-j-z)
 
 Write and read files with context support for cancellation and timeouts:
 
@@ -48,27 +48,43 @@ package main
 import (
     "context"
     "log"
+    "math/rand/v2"
 
     "lesiw.io/fs"
+    "lesiw.io/fs/memfs"
     "lesiw.io/fs/osfs"
 )
 
+var (
+    ctx    = context.Background()
+    fsyses = []struct {
+        name string
+        fn   func() fs.FS
+    }{
+        {"os", osfs.NewTemp},
+        {"mem", memfs.New},
+    }
+    pick = fsyses[rand.IntN(len(fsyses))]
+)
+
 func main() {
-    fsys, ctx := osfs.TempFS(), context.Background()
+    println("picked", pick.name)
+    fsys := pick.fn()
     defer fs.Close(fsys)
 
-    // Write a file
+    // Write a file.
     data := []byte("Hello, world!")
     if err := fs.WriteFile(ctx, fsys, "hello.txt", data); err != nil {
         log.Fatal(err)
     }
 
-    // Read it back
+    // Read it back.
     content, err := fs.ReadFile(ctx, fsys, "hello.txt")
     if err != nil {
         log.Fatal(err)
     }
     println(string(content))
+
     // Output: Hello, world!
 }
 ```
@@ -122,12 +138,12 @@ if errors.Is(err, fs.ErrUnsupported) {
 
 When native support is unavailable, operations may provide fallback implementations:
 
-* `Append` falls back to opening the file and seeking to the end when unsupported.
+* `Append` falls back to reading the existing file and rewriting it with the new content appended when unsupported.
 * `Rename` falls back to copying and deleting when unsupported.
 * `Truncate` falls back to creating an empty file (size 0) or reading, removing, and recreating the file with adjusted size (non-zero) when unsupported.
 * `ReadDir` calls `Walk` with depth 1 when unsupported.
 * `Walk` recursively calls `ReadDir` when unsupported.
-* `TempDir` creates directories with random names when unsupported.
+* `Temp` creates temporary directories with random names when `TempDirFS` is unsupported.
 * Directory operations (trailing slash) use `archive/tar` when native tar commands aren't available.
 
 These fallbacks maintain code portability across implementations while allowing native optimizations.

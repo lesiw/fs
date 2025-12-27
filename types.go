@@ -88,6 +88,7 @@
 //   - [ChtimesFS] - Change file timestamps
 //   - [CreateFS] - Create or truncate files for writing
 //   - [DirFS] - Read directories as tar streams
+//   - [GlobFS] - Pattern-based file matching
 //   - [LocalizeFS] - OS-specific path formatting
 //   - [MkdirFS] - Create directories
 //   - [ReadDirFS] - List directory contents
@@ -98,8 +99,10 @@
 //   - [RenameFS] - Move or rename files
 //   - [StatFS] - Query file metadata
 //   - [SymlinkFS] - Create symbolic links
-//   - [TempFS] - Native temporary directory support
+//   - [TempDirFS] - Native temporary directory support
+//   - [TempFS] - Native temporary file support
 //   - [TruncateDirFS] - Efficiently empty directories
+//   - [TruncateFS] - Change file size
 //   - [WalkFS] - Efficient directory traversal
 //
 // Helper functions check capabilities automatically and return
@@ -182,15 +185,17 @@
 // Many operations provide fallback implementations when native support is
 // unavailable.
 //
-//   - [Append] falls back to [Open] and [Create] when [AppendFS] is not
+//   - [Append] falls back to reading the existing file and rewriting it with
+//     new content appended when [AppendFS] is not implemented.
+//   - [Rename] falls back to copying and deleting when [RenameFS] is not
 //     implemented.
 //   - [Truncate] falls back to creating an empty file when size is 0, or
 //     reading, removing, and recreating the file with adjusted size for
 //     non-zero sizes, when [TruncateFS] is not implemented.
 //   - [ReadDir] calls [Walk] with depth 1 when [ReadDirFS] is not implemented.
 //   - [Walk] recursively calls [ReadDir] when [WalkFS] is not implemented.
-//   - [TempDir] creates directories with random names when [TempFS] is
-//     not implemented.
+//   - [Temp] creates temporary files or directories with random names when
+//     [TempFS] or [TempDirFS] are not implemented.
 //
 // These operations succeed regardless of native support. Native
 // implementations
