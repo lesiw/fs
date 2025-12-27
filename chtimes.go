@@ -11,10 +11,12 @@ type ChtimesFS interface {
 	FS
 
 	// Chtimes changes the access and modification times of the named file.
+	// A zero time.Time value will leave the corresponding file time unchanged.
 	Chtimes(ctx context.Context, name string, atime, mtime time.Time) error
 }
 
 // Chtimes changes the access and modification times of the named file.
+// A zero time.Time value will leave the corresponding file time unchanged.
 // Analogous to: [os.Chtimes], touch -t, 9P Twstat.
 //
 // Requires: [ChtimesFS]
