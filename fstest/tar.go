@@ -17,11 +17,9 @@ func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Run("OpenEmptyDir", func(t *testing.T) {
 		testOpenEmptyDir(ctx, t, fsys)
 	})
-
 	t.Run("OpenDir", func(t *testing.T) {
 		testOpenDir(ctx, t, fsys)
 	})
-
 	t.Run("CreateDir", func(t *testing.T) {
 		testCreateDir(ctx, t, fsys)
 	})

@@ -10,79 +10,92 @@ import (
 
 func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Run("RemoveFile", func(t *testing.T) {
-		fileData := []byte("data")
-		fileName := "test_remove_file.txt"
-		if err := fs.WriteFile(ctx, fsys, fileName, fileData); err != nil {
-			if errors.Is(err, fs.ErrUnsupported) {
-				t.Skip("write operations not supported")
-			}
-			t.Fatalf("write file: %v", err)
-		}
-		cleanup(ctx, t, fsys, fileName)
-
-		if err := fs.Remove(ctx, fsys, fileName); err != nil {
-			if errors.Is(err, fs.ErrUnsupported) {
-				t.Skip("RemoveFS not supported")
-			}
-			t.Fatalf("remove file: %v", err)
-		}
-
-		_, statErr := fs.Stat(ctx, fsys, fileName)
-		if statErr == nil {
-			t.Errorf("stat after remove: file still exists")
-		}
+		testRemoveFile(ctx, t, fsys)
 	})
-
 	t.Run("RemoveDir", func(t *testing.T) {
-		dirName := "test_remove_dir"
-		mkdirErr := fs.Mkdir(ctx, fsys, dirName)
-		if errors.Is(mkdirErr, fs.ErrUnsupported) {
-			t.Skip("MkdirFS not supported")
-		}
-		if mkdirErr != nil {
-			t.Fatalf("mkdir: %v", mkdirErr)
-		}
-		cleanup(ctx, t, fsys, dirName)
-
-		if err := fs.Remove(ctx, fsys, dirName); err != nil {
-			if errors.Is(err, fs.ErrUnsupported) {
-				t.Skip("RemoveFS not supported")
-			}
-			t.Fatalf("remove dir: %v", err)
-		}
-
-		_, statErr := fs.Stat(ctx, fsys, dirName)
-		if statErr == nil {
-			t.Errorf("stat after remove: directory still exists")
-		}
+		testRemoveDir(ctx, t, fsys)
 	})
-
 	t.Run("RemoveNonempty", func(t *testing.T) {
-		mkdirErr := fs.Mkdir(ctx, fsys, "")
-		if errors.Is(mkdirErr, fs.ErrUnsupported) {
-			t.Skip("MkdirFS not supported")
-		}
+		testRemoveNonempty(ctx, t, fsys)
+	})
+	t.Run("RemoveAll", func(t *testing.T) {
+		testRemoveAll(ctx, t, fsys)
+	})
+}
 
-		fileData := []byte("data")
-		nonemptyDir := "test_remove_nonempty"
-		if err := fs.Mkdir(ctx, fsys, nonemptyDir); err != nil {
-			t.Fatalf("mkdir: %v", err)
+func testRemoveFile(ctx context.Context, t *testing.T, fsys fs.FS) {
+	fileData := []byte("data")
+	fileName := "test_remove_file.txt"
+	if err := fs.WriteFile(ctx, fsys, fileName, fileData); err != nil {
+		if errors.Is(err, fs.ErrUnsupported) {
+			t.Skip("write operations not supported")
 		}
-		cleanup(ctx, t, fsys, nonemptyDir)
+		t.Fatalf("write file: %v", err)
+	}
+	cleanup(ctx, t, fsys, fileName)
 
-		fileInDir := nonemptyDir + "/file.txt"
-		writeErr := fs.WriteFile(ctx, fsys, fileInDir, fileData)
-		if writeErr != nil {
-			t.Fatalf("write: %v", writeErr)
-		}
-
-		removeErr := fs.Remove(ctx, fsys, nonemptyDir)
-		if removeErr == nil {
-			t.Errorf("remove non-empty dir: expected error, got nil")
-		} else if errors.Is(removeErr, fs.ErrUnsupported) {
+	if err := fs.Remove(ctx, fsys, fileName); err != nil {
+		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("RemoveFS not supported")
 		}
-	})
+		t.Fatalf("remove file: %v", err)
+	}
+
+	_, statErr := fs.Stat(ctx, fsys, fileName)
+	if statErr == nil {
+		t.Errorf("stat after remove: file still exists")
+	}
+}
+
+func testRemoveDir(ctx context.Context, t *testing.T, fsys fs.FS) {
+	dirName := "test_remove_dir"
+	mkdirErr := fs.Mkdir(ctx, fsys, dirName)
+	if errors.Is(mkdirErr, fs.ErrUnsupported) {
+		t.Skip("MkdirFS not supported")
+	}
+	if mkdirErr != nil {
+		t.Fatalf("mkdir: %v", mkdirErr)
+	}
+	cleanup(ctx, t, fsys, dirName)
+
+	if err := fs.Remove(ctx, fsys, dirName); err != nil {
+		if errors.Is(err, fs.ErrUnsupported) {
+			t.Skip("RemoveFS not supported")
+		}
+		t.Fatalf("remove dir: %v", err)
+	}
+
+	_, statErr := fs.Stat(ctx, fsys, dirName)
+	if statErr == nil {
+		t.Errorf("stat after remove: directory still exists")
+	}
+}
+
+func testRemoveNonempty(ctx context.Context, t *testing.T, fsys fs.FS) {
+	mkdirErr := fs.Mkdir(ctx, fsys, "")
+	if errors.Is(mkdirErr, fs.ErrUnsupported) {
+		t.Skip("MkdirFS not supported")
+	}
+
+	fileData := []byte("data")
+	nonemptyDir := "test_remove_nonempty"
+	if err := fs.Mkdir(ctx, fsys, nonemptyDir); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	cleanup(ctx, t, fsys, nonemptyDir)
+
+	fileInDir := nonemptyDir + "/file.txt"
+	writeErr := fs.WriteFile(ctx, fsys, fileInDir, fileData)
+	if writeErr != nil {
+		t.Fatalf("write: %v", writeErr)
+	}
+
+	removeErr := fs.Remove(ctx, fsys, nonemptyDir)
+	if removeErr == nil {
+		t.Errorf("remove non-empty dir: expected error, got nil")
+	} else if errors.Is(removeErr, fs.ErrUnsupported) {
+		t.Skip("RemoveFS not supported")
+	}
 }
 
 func testRemoveAll(
