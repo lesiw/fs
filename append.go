@@ -95,19 +95,18 @@ func Append(
 
 retry:
 	f, err := afs.Append(ctx, name)
-	if err == nil {
-		return writePathCloser(f, name), nil
-	}
-	if errors.Is(err, ErrNotExist) {
+	if err != nil {
+		if !errors.Is(err, ErrNotExist) {
+			return nil, err
+		}
 		dir := path.Dir(name)
 		if dir == "." || dir == name {
-			return nil, err // No parent to create.
+			return nil, err
 		}
 		if merr := MkdirAll(ctx, fsys, dir); merr != nil {
-			// MkdirAll failed. MkdirFS may not be supported.
 			return nil, errors.Join(err, merr)
 		}
-		goto retry // Try again after creating parent.
+		goto retry
 	}
 	return writePathCloser(f, name), nil
 }

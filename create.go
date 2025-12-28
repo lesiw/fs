@@ -74,10 +74,10 @@ func Create(
 
 retry:
 	f, err := cfs.Create(ctx, name)
-	if err == nil {
-		return writePathCloser(f, name), nil
-	}
-	if errors.Is(err, ErrNotExist) {
+	if err != nil {
+		if !errors.Is(err, ErrNotExist) {
+			return nil, err
+		}
 		dir := path.Dir(name)
 		if dir == "." || dir == name {
 			return nil, err
