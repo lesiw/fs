@@ -105,11 +105,18 @@ func (f *s3FS) Append(
 		_, readErr := io.Copy(wc.buf, obj)
 		_ = obj.Close()
 		if readErr != nil {
-			return nil, &fs.PathError{
-				Op:   "append",
-				Path: name,
-				Err:  readErr,
+			// Check if error is "key doesn't exist"
+			errResp := minio.ToErrorResponse(readErr)
+			if errResp.Code != "NoSuchKey" {
+				// Real error, not just "file doesn't exist"
+				return nil, &fs.PathError{
+					Op:   "append",
+					Path: name,
+					Err:  readErr,
+				}
 			}
+			// File doesn't exist - will be created on Close()
+			wc.buf = nil
 		}
 	}
 
