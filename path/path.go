@@ -40,34 +40,16 @@ func Join(elem ...string) string {
 		return ""
 	}
 
-	// Detect path style from first non-empty element
-	style := detectStyle(elem)
-
-	// Filter empty elements (but remember if last was empty for trailing sep)
-	var trailingDir bool
-	if len(elem) > 0 && elem[len(elem)-1] == "" {
-		trailingDir = true
-		elem = elem[:len(elem)-1]
-	}
-
 	var parts []string
 	for _, e := range elem {
-		if e != "" {
-			parts = append(parts, e)
+		dir, file := Split(e)
+		if dir != "" {
+			parts = append(parts, splitAll(dir)...)
 		}
+		parts = append(parts, file)
 	}
 
-	if len(parts) == 0 {
-		return ""
-	}
-
-	result := joinParts(parts, style)
-
-	if trailingDir && !strings.HasSuffix(result, string(style.sep)) {
-		result += string(style.sep)
-	}
-
-	return Clean(result)
+	return Clean(joinParts(parts, detectStyle(elem)))
 }
 
 // Split splits path into directory and file components.
@@ -415,19 +397,23 @@ func splitAll(path string) []string {
 	return result
 }
 
-// joinParts joins path parts according to the style
+// joinParts joins path parts according to the style.
 func joinParts(parts []string, style pathStyle) string {
 	if len(parts) == 0 {
 		return ""
 	}
 
-	sep := string(style.sep)
-
-	var allParts []string
-	for _, part := range parts {
-		allParts = append(allParts, splitAll(part)...)
+	// Trim leading empty strings (prevent unwanted leading separators)
+	var start int
+	for start < len(parts) && parts[start] == "" {
+		start++
 	}
-	parts = allParts
+	if start >= len(parts) {
+		return ""
+	}
+	parts = parts[start:]
+
+	sep := string(style.sep)
 
 	switch style.kind {
 	case styleURL:
