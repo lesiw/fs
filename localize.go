@@ -7,8 +7,11 @@ import (
 	"lesiw.io/fs/path"
 )
 
-// A LocalizeFS is a filesystem that can resolve paths against its native
-// environment.
+// A LocalizeFS is a filesystem that can convert Unix-style paths
+// to native paths.
+//
+// In most circumstances, this should be a lexical operation.
+// For true path canonicalization, see [AbsFS].
 //
 // Operations like Open, Create, Append, and Truncate automatically call
 // Localize internally when the filesystem implements LocalizeFS. The localized
@@ -17,7 +20,7 @@ import (
 type LocalizeFS interface {
 	FS
 
-	// Localize resolves a path against the filesystem's native environment.
+	// Localize converts a Unix-style path to a native representation.
 	//
 	// Localize must be idempotent: calling Localize on an already-localized
 	// path should return the same path. That is, Localize(Localize(p))
@@ -25,7 +28,10 @@ type LocalizeFS interface {
 	Localize(ctx context.Context, path string) (string, error)
 }
 
-// Localize resolves a path against the filesystem's native environment.
+// Localize converts a path from Unix-style to native.
+//
+// This is typically a lexical operation.
+// For canonical path representation, use [Abs].
 //
 // Localize may be called with an already-localized path and should return the
 // same path unchanged (idempotent behavior).
