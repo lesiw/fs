@@ -32,7 +32,7 @@ func (f *memFS) ReadDir(
 		if !n.dir {
 			f.RUnlock()
 			yield(nil, &fs.PathError{
-				Op: "readdir", Path: name, Err: errNotDir,
+				Op: "readdir", Path: name, Err: fs.ErrNotDir,
 			})
 			return
 		}

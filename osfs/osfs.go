@@ -19,6 +19,7 @@ package osfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -180,8 +181,18 @@ func (f *osFS) ReadDir(
 			yield(nil, err)
 			return
 		}
+
 		entries, readErr := os.ReadDir(path)
 		if readErr != nil {
+			// Translate syscall.ENOTDIR to fs.ErrNotDir
+			if pathErr, ok := readErr.(*fs.PathError); ok {
+				if errors.Is(pathErr.Err, errNotDir) {
+					yield(nil, &fs.PathError{
+						Op: "readdir", Path: name, Err: fs.ErrNotDir,
+					})
+					return
+				}
+			}
 			yield(nil, readErr)
 			return
 		}

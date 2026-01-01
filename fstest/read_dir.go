@@ -16,6 +16,13 @@ func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	t.Run("ReadDirCurrent", func(t *testing.T) {
 		testReadDirCurrent(ctx, t, fsys, files)
 	})
+
+	file := testReadDirFile(files)
+	if file != nil {
+		t.Run("ReadDirOnFile", func(t *testing.T) {
+			testReadDirOnFile(ctx, t, fsys, file)
+		})
+	}
 }
 
 func testReadDirDot(ctx context.Context, t *testing.T, fsys fs.FS) {
@@ -124,4 +131,45 @@ func testReadDirWant(files []File) map[string]readDirEntry {
 	}
 
 	return want
+}
+
+func testReadDirFile(files []File) *File {
+	for i := range files {
+		if !files[i].Mode.IsDir() {
+			return &files[i]
+		}
+	}
+	return nil
+}
+
+func testReadDirOnFile(
+	ctx context.Context, t *testing.T, fsys fs.FS, testFile *File,
+) {
+
+	// Attempt to ReadDir on the file
+	var gotErr error
+	for _, err := range fs.ReadDir(ctx, fsys, testFile.Path) {
+		if err != nil {
+			gotErr = err
+			break
+		}
+	}
+
+	// Should get an error
+	if gotErr == nil {
+		t.Fatal("ReadDir on file succeeded, want error")
+	}
+
+	// Check that it's the right kind of error
+	var pathErr *fs.PathError
+	if !errors.As(gotErr, &pathErr) {
+		t.Fatalf("ReadDir on file error = %T, want *fs.PathError", gotErr)
+	}
+
+	if !errors.Is(pathErr.Err, fs.ErrNotDir) {
+		t.Errorf(
+			"ReadDir on file error = %v, want fs.ErrNotDir",
+			pathErr.Err,
+		)
+	}
 }

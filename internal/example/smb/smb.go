@@ -174,6 +174,17 @@ func (f *smbFS) ReadDir(
 			name = "."
 		}
 
+		// Check if this is a file (not a directory)
+		info, statErr := f.Stat(ctx, name)
+		if statErr == nil && !info.IsDir() {
+			yield(nil, &fs.PathError{
+				Op:   "readdir",
+				Path: name,
+				Err:  fs.ErrNotDir,
+			})
+			return
+		}
+
 		fullPath := f.fullPath(ctx, name)
 		entries, err := f.share.ReadDir(fullPath)
 		if err != nil {

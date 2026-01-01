@@ -337,6 +337,7 @@ var (
 	ErrNotExist    = fs.ErrNotExist
 	ErrClosed      = fs.ErrClosed
 	ErrUnsupported = errors.ErrUnsupported
+	ErrNotDir      = errors.New("not a directory")
 )
 
 // Valid values for [Mode].

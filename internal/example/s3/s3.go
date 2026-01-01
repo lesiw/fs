@@ -235,6 +235,17 @@ func (f *s3FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
+		// Check if this is a file (not a directory)
+		info, statErr := f.Stat(ctx, name)
+		if statErr == nil && !info.IsDir() {
+			yield(nil, &fs.PathError{
+				Op:   "readdir",
+				Path: name,
+				Err:  fs.ErrNotDir,
+			})
+			return
+		}
+
 		prefix := name
 		if prefix == "." {
 			prefix = ""

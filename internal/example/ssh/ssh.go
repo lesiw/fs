@@ -184,6 +184,17 @@ func (f *sshFS) ReadDir(
 			name = "."
 		}
 
+		// Check if this is a file (not a directory)
+		info, statErr := f.Stat(ctx, name)
+		if statErr == nil && !info.IsDir() {
+			yield(nil, &fs.PathError{
+				Op:   "readdir",
+				Path: name,
+				Err:  fs.ErrNotDir,
+			})
+			return
+		}
+
 		entries, err := f.client.ReadDir(f.fullPath(ctx, name))
 		if err != nil {
 			yield(nil, convertError("readdir", name, err))
