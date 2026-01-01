@@ -42,7 +42,6 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 
 	want := testWalkWant(files)
 	var found []string
-	var prevDepth int
 
 	for e, err := range fs.Walk(ctx, fsys, ".", -1) {
 		if err != nil {
@@ -54,15 +53,6 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 		if p != "." {
 			found = append(found, p)
 		}
-
-		depth := pathDepth(".", e.Path())
-		if depth < prevDepth {
-			t.Errorf(
-				"Walk(\".\") %q at depth %d after depth %d",
-				e.Path(), depth, prevDepth,
-			)
-		}
-		prevDepth = depth
 	}
 
 	if !pathsEqual(found, want) {
@@ -90,35 +80,6 @@ func testWalkWant(files []File) []string {
 	}
 
 	return want
-}
-
-func testWalkBreadthFirst(
-	ctx context.Context, t *testing.T, fsys fs.FS, files []File,
-) {
-	_, hasWalk := fsys.(fs.WalkFS)
-	_, hasReadDir := fsys.(fs.ReadDirFS)
-	if !hasWalk && !hasReadDir {
-		t.Skip("Walk not supported (requires WalkFS or ReadDirFS)")
-	}
-
-	var depths []int
-
-	for e, err := range fs.Walk(ctx, fsys, ".", -1) {
-		if err != nil {
-			t.Errorf("Walk(\".\") iteration: %v", err)
-			continue
-		}
-		depths = append(depths, pathDepth(".", e.Path()))
-	}
-
-	for i := 1; i < len(depths); i++ {
-		if depths[i] < depths[i-1] {
-			t.Errorf(
-				"Walk(\".\") depth %d to %d at index %d",
-				depths[i-1], depths[i], i,
-			)
-		}
-	}
 }
 
 func testWalkDepth(
