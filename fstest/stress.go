@@ -64,7 +64,7 @@ func testMixedOperations(
 	}
 
 	// Verify all files via Walk
-	walkCount := 0
+	var walkCount int
 	for entry, walkErr := range fs.Walk(ctx, fsys, baseDir, -1) {
 		if walkErr != nil {
 			t.Errorf("Walk() error: %v", walkErr)
@@ -78,11 +78,16 @@ func testMixedOperations(
 				t.Errorf("ReadFile(%q): %v", entry.Path(), readErr)
 				continue
 			}
-			expected, ok := testFiles[entry.Path()]
-			if !ok {
-				t.Errorf("unexpected file in Walk: %q", entry.Path())
-				continue
+			var expected []byte
+			for key := range testFiles {
+				if pathsEqual([]string{entry.Path()}, []string{key}) {
+					expected = testFiles[key]
+					goto found
+				}
 			}
+			t.Errorf("unexpected file in Walk: %q", entry.Path())
+			continue
+		found:
 			if !bytes.Equal(data, expected) {
 				t.Errorf(
 					"file %q content = %q, want %q",
