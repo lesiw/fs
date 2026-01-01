@@ -371,20 +371,6 @@ func (f *osFS) Abs(ctx context.Context, name string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-var _ fs.RelFS = (*osFS)(nil)
-
-func (f *osFS) Rel(
-	ctx context.Context, basepath, targpath string,
-) (string, error) {
-	// Use filepath.Rel for OS-specific path handling
-	rel, err := filepath.Rel(basepath, targpath)
-	if err != nil {
-		return "", err
-	}
-	// Convert to forward slashes for fs consistency
-	return filepath.ToSlash(rel), nil
-}
-
 var _ fs.TempFS = (*osFS)(nil)
 
 func (f *osFS) Temp(ctx context.Context, name string) (string, error) {

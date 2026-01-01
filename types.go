@@ -93,7 +93,6 @@
 //   - [MkdirFS] - Create directories
 //   - [ReadDirFS] - List directory contents
 //   - [ReadLinkFS] - Read symlink targets and stat without following
-//   - [RelFS] - Relative path computation
 //   - [RemoveAllFS] - Recursively delete directories
 //   - [RemoveFS] - Delete files and empty directories
 //   - [RenameFS] - Move or rename files

@@ -108,7 +108,6 @@ func TestFS(
 	testLocalize(ctx, t, fsys)
 	testMkdir(ctx, t, fsys)
 	testReadDir(ctx, t, fsys, files)
-	testRel(ctx, t, fsys)
 	testRemove(ctx, t, fsys)
 	testRename(ctx, t, fsys)
 	testStat(ctx, t, fsys, files)
