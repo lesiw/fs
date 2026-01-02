@@ -272,10 +272,10 @@ import (
 // DirEntry describes a directory entry.
 //
 // This interface extends the standard io/fs.DirEntry with path information.
-// Path() returns the full path of the entry when called on entries returned
-// by Walk. For entries returned by ReadDir, Path() returns an empty string
-// since ReadDir only provides entries within a single directory without
-// path context.
+// The Path() method returns the path of the entry matching the semantics of
+// the path parameter in fs.WalkDirFunc. For entries returned by ReadDir,
+// Path() returns an empty string since ReadDir only provides entries within a
+// single directory.
 type DirEntry interface {
 	// Name returns the name of the file (or subdirectory) described
 	// by the entry. This name is only the final element of the path
@@ -300,9 +300,14 @@ type DirEntry interface {
 	// the link's target.
 	Info() (FileInfo, error)
 
-	// Path returns the full path of this entry relative to the walk root.
-	// For entries returned by ReadDir, this returns an empty string.
-	// For entries returned by Walk, this returns the full path.
+	// Path returns the path of this entry, matching the semantics of the
+	// path argument to fs.WalkDirFunc. The path contains the walk root as a
+	// prefix. For example, if Walk is called with root "dir" and finds a
+	// file named "a" in that directory, Path() will return "dir/a".
+	//
+	// For entries returned by ReadDir, Path() returns an empty string since
+	// ReadDir only provides entries within a single directory without path
+	// context.
 	Path() string
 }
 
