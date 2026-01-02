@@ -115,6 +115,12 @@ func ReadDir(
 func Walk(
 	ctx context.Context, fsys FS, root string, depth int,
 ) iter.Seq2[DirEntry, error] {
+	var err error
+	if root, err = localizePath(ctx, fsys, root); err != nil {
+		return func(yield func(DirEntry, error) bool) {
+			yield(nil, err)
+		}
+	}
 	if wfs, ok := fsys.(WalkFS); ok {
 		return wfs.Walk(ctx, root, depth)
 	}
