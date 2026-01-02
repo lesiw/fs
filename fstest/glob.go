@@ -15,12 +15,12 @@ func testGlob(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	_, hasReadDir := fsys.(fs.ReadDirFS)
 
 	if !hasGlob && (!hasStat || !hasReadDir) {
-		t.Skip("Glob not supported (requires GlobFS or StatFS+ReadDirFS)")
+		t.Skip("Glob not supported")
 	}
 
 	txtFiles := testGlobWant(files, "*.txt")
 	if len(txtFiles) == 0 {
-		t.Skip("no .txt files in root")
+		t.Skip("no .txt files available for glob tests")
 	}
 	t.Run("GlobWildcard", func(t *testing.T) {
 		testGlobWildcard(ctx, t, fsys, txtFiles)

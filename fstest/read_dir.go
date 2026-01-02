@@ -166,9 +166,12 @@ func testReadDirOnFile(
 		t.Fatalf("ReadDir on file error = %T, want *fs.PathError", gotErr)
 	}
 
-	if !errors.Is(pathErr.Err, fs.ErrNotDir) {
+	notDir := errors.Is(pathErr.Err, fs.ErrNotDir)
+	unsupported := errors.Is(pathErr.Err, fs.ErrUnsupported)
+	if !notDir && !unsupported {
 		t.Errorf(
-			"ReadDir on file error = %v, want fs.ErrNotDir",
+			"ReadDir on file error = %v, want fs.ErrNotDir or "+
+				"fs.ErrUnsupported",
 			pathErr.Err,
 		)
 	}

@@ -97,26 +97,66 @@ func TestFS(
 		}
 	}
 
-	testAbs(ctx, t, fsys)
-	testAppend(ctx, t, fsys)
-	testChmod(ctx, t, fsys)
-	testChown(ctx, t, fsys)
-	testChtimes(ctx, t, fsys)
-	testCreate(ctx, t, fsys)
-	testDirFS(ctx, t, fsys)
-	testGlob(ctx, t, fsys, files)
-	testLocalize(ctx, t, fsys)
-	testMkdir(ctx, t, fsys)
-	testReadDir(ctx, t, fsys, files)
-	testRemove(ctx, t, fsys)
-	testRename(ctx, t, fsys)
-	testStat(ctx, t, fsys, files)
-	testStress(ctx, t, fsys)
-	testSymlink(ctx, t, fsys)
-	testTemp(ctx, t, fsys)
-	testTruncate(ctx, t, fsys)
-	testWalk(ctx, t, fsys, files)
-	testWorkDir(ctx, t, fsys)
+	t.Run("Abs", func(t *testing.T) {
+		testAbs(ctx, t, fsys)
+	})
+	t.Run("Append", func(t *testing.T) {
+		testAppend(ctx, t, fsys)
+	})
+	t.Run("Chmod", func(t *testing.T) {
+		testChmod(ctx, t, fsys)
+	})
+	t.Run("Chown", func(t *testing.T) {
+		testChown(ctx, t, fsys)
+	})
+	t.Run("Chtimes", func(t *testing.T) {
+		testChtimes(ctx, t, fsys)
+	})
+	t.Run("Create", func(t *testing.T) {
+		testCreate(ctx, t, fsys)
+	})
+	t.Run("DirFS", func(t *testing.T) {
+		testDirFS(ctx, t, fsys)
+	})
+	t.Run("Glob", func(t *testing.T) {
+		testGlob(ctx, t, fsys, files)
+	})
+	t.Run("Localize", func(t *testing.T) {
+		testLocalize(ctx, t, fsys)
+	})
+	t.Run("Mkdir", func(t *testing.T) {
+		testMkdir(ctx, t, fsys)
+	})
+	t.Run("ReadDir", func(t *testing.T) {
+		testReadDir(ctx, t, fsys, files)
+	})
+	t.Run("Remove", func(t *testing.T) {
+		testRemove(ctx, t, fsys)
+	})
+	t.Run("Rename", func(t *testing.T) {
+		testRename(ctx, t, fsys)
+	})
+	t.Run("Stat", func(t *testing.T) {
+		testStat(ctx, t, fsys, files)
+	})
+	t.Run("Stress", func(t *testing.T) {
+		testStress(ctx, t, fsys)
+	})
+	t.Run("Symlink", func(t *testing.T) {
+		testSymlink(ctx, t, fsys)
+	})
+	t.Run("Temp", func(t *testing.T) {
+		testTemp(ctx, t, fsys)
+	})
+	t.Run("Truncate", func(t *testing.T) {
+		testTruncate(ctx, t, fsys)
+	})
+	t.Run("Walk", func(t *testing.T) {
+		testWalk(ctx, t, fsys, files)
+	})
+	t.Run("WorkDir", func(t *testing.T) {
+		testWorkDir(ctx, t, fsys)
+	})
 }
 
 func normalizePath(p string) []string {
