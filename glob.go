@@ -43,11 +43,12 @@ func Glob(ctx context.Context, fsys FS, pattern string) ([]string, error) {
 		// Fall through to fallback if ErrUnsupported
 	}
 
-	// Check if fallback is possible - requires StatFS and ReadDirFS
+	// Fallback requires StatFS and (ReadDirFS or WalkFS)
 	_, hasStat := fsys.(StatFS)
 	_, hasReadDir := fsys.(ReadDirFS)
+	_, hasWalk := fsys.(WalkFS)
 
-	if !hasStat || !hasReadDir {
+	if !hasStat || (!hasReadDir && !hasWalk) {
 		return nil, &PathError{
 			Op:   "glob",
 			Path: pattern,
