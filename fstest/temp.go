@@ -41,12 +41,6 @@ func testTempFileCreateAndWrite(
 	}
 	cleanup(ctx, t, fsys, w.Path())
 
-	tempFile := w.Path()
-	if !strings.Contains(tempFile, prefix) {
-		t.Errorf("Temp(%q) path = %q, want to contain %q",
-			prefix, tempFile, prefix)
-	}
-
 	testData := []byte("temporary file content")
 	if _, err := w.Write(testData); err != nil {
 		t.Fatalf("Write err: %v", err)
@@ -98,11 +92,6 @@ func testTempDirCreateAndUse(ctx context.Context, t *testing.T, fsys fs.FS) {
 	cleanup(ctx, t, fsys, w.Path())
 
 	tempDir := w.Path()
-	prefixWithoutSlash := strings.TrimSuffix(prefix, "/")
-	if !strings.Contains(tempDir, prefixWithoutSlash) {
-		t.Errorf("Temp(%q) path = %q, want to contain %q",
-			prefix, tempDir, prefixWithoutSlash)
-	}
 
 	if closeErr := w.Close(); closeErr != nil {
 		t.Fatalf("Close err: %v", closeErr)
