@@ -57,8 +57,26 @@ func ReadDir(
 		return rdfs.ReadDir(ctx, name)
 	}
 
-	// Fallback to Walk if available
+	// Fallback to Walk if available.
 	if wfs, ok := fsys.(WalkFS); ok {
+		// Check if path is a directory first.
+		if sfs, ok := fsys.(StatFS); ok {
+			info, err := sfs.Stat(ctx, name)
+			if err != nil {
+				return func(yield func(DirEntry, error) bool) {
+					yield(nil, err)
+				}
+			}
+			if !info.IsDir() {
+				return func(yield func(DirEntry, error) bool) {
+					yield(nil, &PathError{
+						Op:   "readdir",
+						Path: name,
+						Err:  ErrNotDir,
+					})
+				}
+			}
+		}
 		return wfs.Walk(ctx, name, 1)
 	}
 
@@ -82,8 +100,7 @@ func ReadDir(
 //
 // Walk does not guarantee any particular order (lexicographic or
 // breadth-first). Implementations may choose whatever order is most
-// efficient. For guaranteed lexicographic order within each directory,
-// use [ReadDir].
+// efficient.
 //
 // Walk does not follow symbolic links. Entries are yielded for symbolic
 // links themselves, but they are not traversed.
