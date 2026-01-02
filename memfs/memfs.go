@@ -120,7 +120,11 @@ func newWriter(fs *memFS, n *node) *writer {
 	return &writer{memFS: fs, node: n}
 }
 
-func (w *writer) Write(p []byte) (int, error) { return w.Buffer.Write(p) }
+func (w *writer) Write(p []byte) (int, error) {
+	w.Lock()
+	defer w.Unlock()
+	return w.Buffer.Write(p)
+}
 
 func (w *writer) Close() error {
 	w.Lock()
