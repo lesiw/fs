@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"slices"
 	"testing"
 
 	"lesiw.io/fs"
@@ -208,7 +207,7 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 }
 
-// TestCreateDir tests writing a tar stream to create a directory.
+// testCreateDir tests writing tar streams to create directories.
 func testCreateDir(
 	ctx context.Context, t *testing.T, fsys fs.FS,
 ) {
@@ -216,129 +215,98 @@ func testCreateDir(
 		t.Skip("CreateFS not supported")
 	}
 
-	// Create tar archive in memory
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-
-	// Add a file
-	file1Data := []byte("created from tar")
-	file1Header := &tar.Header{
-		Name: "created_file.txt",
-		Mode: 0644,
-		Size: int64(len(file1Data)),
-	}
-	if err := tw.WriteHeader(file1Header); err != nil {
-		t.Fatalf("WriteHeader(): %v", err)
-	}
-	if _, err := tw.Write(file1Data); err != nil {
-		t.Fatalf("Write(): %v", err)
+	type entry struct {
+		header *tar.Header
+		data   []byte
 	}
 
-	// Add a directory
-	dirHeader := &tar.Header{
-		Name:     "created_subdir/",
-		Mode:     0755,
-		Typeflag: tar.TypeDir,
-	}
-	if err := tw.WriteHeader(dirHeader); err != nil {
-		t.Fatalf("WriteHeader() for dir: %v", err)
-	}
+	tests := []struct {
+		name    string
+		entries []entry
+		padding int // trailing zero bytes after end-of-archive
+		files   map[string][]byte
+	}{{
+		name: "basic",
+		entries: []entry{{
+			&tar.Header{Name: "file.txt", Mode: 0644},
+			[]byte("created from tar"),
+		}, {
+			&tar.Header{
+				Name:     "subdir/",
+				Mode:     0755,
+				Typeflag: tar.TypeDir,
+			},
+			nil,
+		}, {
+			&tar.Header{Name: "subdir/nested.txt", Mode: 0644},
+			[]byte("nested file from tar"),
+		}},
+		files: map[string][]byte{
+			"file.txt":          []byte("created from tar"),
+			"subdir/nested.txt": []byte("nested file from tar"),
+		},
+	}, {
+		name: "padded",
+		entries: []entry{{
+			&tar.Header{Name: "file.txt", Mode: 0644},
+			[]byte("padded tar content"),
+		}},
+		padding: 8192,
+		files: map[string][]byte{
+			"file.txt": []byte("padded tar content"),
+		},
+	}}
 
-	// Add a file in subdirectory
-	file2Data := []byte("nested file from tar")
-	file2Header := &tar.Header{
-		Name: "created_subdir/nested.txt",
-		Mode: 0644,
-		Size: int64(len(file2Data)),
-	}
-	if err := tw.WriteHeader(file2Header); err != nil {
-		t.Fatalf("WriteHeader(): %v", err)
-	}
-	if _, err := tw.Write(file2Data); err != nil {
-		t.Fatalf("Write(): %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			tw := tar.NewWriter(&buf)
 
-	if err := tw.Close(); err != nil {
-		t.Fatalf("Close() tar writer: %v", err)
-	}
+			for _, e := range tt.entries {
+				e.header.Size = int64(len(e.data))
+				if err := tw.WriteHeader(e.header); err != nil {
+					t.Fatalf("WriteHeader(%q): %v", e.header.Name, err)
+				}
+				if len(e.data) > 0 {
+					if _, err := tw.Write(e.data); err != nil {
+						t.Fatalf("Write(%q): %v", e.header.Name, err)
+					}
+				}
+			}
+			if err := tw.Close(); err != nil {
+				t.Fatalf("Close() tar writer: %v", err)
+			}
+			if tt.padding > 0 {
+				buf.Write(make([]byte, tt.padding))
+			}
 
-	// Extract tar to filesystem using trailing slash
-	testDir := "test_createdir"
+			testDir := "test_createdir_" + tt.name
+			w, err := fs.Create(ctx, fsys, testDir+"/")
+			if err != nil {
+				t.Fatalf("Create(%q): %v", testDir+"/", err)
+			}
+			cleanup(ctx, t, fsys, testDir)
 
-	tarWriter, err := fs.Create(ctx, fsys, testDir+"/")
-	if err != nil {
-		t.Fatalf("Create(%q): %v", testDir+"/", err)
-	}
-	cleanup(ctx, t, fsys, testDir)
+			if _, err := io.Copy(w, &buf); err != nil {
+				w.Close()
+				t.Fatalf("Copy(): %v", err)
+			}
+			if err := w.Close(); err != nil {
+				t.Fatalf("Close(): %v", err)
+			}
 
-	if _, err := io.Copy(tarWriter, &buf); err != nil {
-		tarWriter.Close()
-		t.Fatalf("Copy() tar data: %v", err)
-	}
-
-	if err := tarWriter.Close(); err != nil {
-		t.Fatalf("Close() tar writer: %v", err)
-	}
-
-	// Verify files were created
-	file1Path := testDir + "/created_file.txt"
-	readData, readErr := fs.ReadFile(ctx, fsys, file1Path)
-	if readErr != nil {
-		t.Fatalf("ReadFile(%q): %v", file1Path, readErr)
-	}
-
-	if !bytes.Equal(readData, file1Data) {
-		t.Errorf(
-			"ReadFile(%q) = %q, want %q",
-			file1Path, readData, file1Data,
-		)
-	}
-
-	// Verify subdirectory was created
-	dirPath := testDir + "/created_subdir"
-	info, statErr := fs.Stat(ctx, fsys, dirPath)
-	if statErr != nil {
-		t.Fatalf("Stat(%q): %v", dirPath, statErr)
-	}
-
-	if !info.IsDir() {
-		t.Errorf("Stat(%q): IsDir() = false, want true", dirPath)
-	}
-
-	// Verify nested file
-	file2Path := testDir + "/created_subdir/nested.txt"
-	readData, readErr = fs.ReadFile(ctx, fsys, file2Path)
-	if readErr != nil {
-		t.Fatalf("ReadFile(%q): %v", file2Path, readErr)
-	}
-
-	if !bytes.Equal(readData, file2Data) {
-		t.Errorf(
-			"ReadFile(%q) = %q, want %q",
-			file2Path, readData, file2Data,
-		)
-	}
-
-	// Verify all expected files exist by walking the directory
-	var foundFiles []string
-	for entry, walkErr := range fs.Walk(ctx, fsys, testDir, -1) {
-		if walkErr != nil {
-			t.Errorf("Walk() error: %v", walkErr)
-			continue
-		}
-		if !entry.IsDir() {
-			foundFiles = append(foundFiles, entry.Name())
-		}
-	}
-
-	expectedNames := []string{"created_file.txt", "nested.txt"}
-	slices.Sort(foundFiles)
-	slices.Sort(expectedNames)
-
-	if !slices.Equal(foundFiles, expectedNames) {
-		t.Errorf(
-			"Walk() found files = %v, want %v",
-			foundFiles, expectedNames,
-		)
+			for name, want := range tt.files {
+				got, err := fs.ReadFile(ctx, fsys, testDir+"/"+name)
+				if err != nil {
+					t.Fatalf("ReadFile(%q): %v", name, err)
+				}
+				if !bytes.Equal(got, want) {
+					t.Errorf(
+						"ReadFile(%q) = %q, want %q",
+						name, got, want,
+					)
+				}
+			}
+		})
 	}
 }

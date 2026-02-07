@@ -150,6 +150,11 @@ func appendDirAsTar(
 	pr, pw := io.Pipe()
 	go func() {
 		err := extractTarToFS(ctx, fsys, dir, pr)
+		if err == nil {
+			// Drain trailing data (e.g. tar block-alignment padding)
+			// so the writer side doesn't get a broken pipe error.
+			_, err = io.Copy(io.Discard, pr)
+		}
 		pr.CloseWithError(err)
 	}()
 	return pw, nil
