@@ -288,7 +288,7 @@ func testCreateDir(
 			cleanup(ctx, t, fsys, testDir)
 
 			if _, err := io.Copy(w, &buf); err != nil {
-				w.Close()
+				_ = w.Close()
 				t.Fatalf("Copy(): %v", err)
 			}
 			if err := w.Close(); err != nil {

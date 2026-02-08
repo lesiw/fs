@@ -55,11 +55,11 @@ func testCreateAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	n, err := f.Write(testData)
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(%q): %v", testData, err)
 	}
 	if n != len(testData) {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(%q) = %d bytes, want %d", testData, n, len(testData))
 	}
 
@@ -132,11 +132,11 @@ func testCreateBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	n, err := f.Write(binaryData)
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(binary): %v", err)
 	}
 	if n != len(binaryData) {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(binary) = %d bytes, want %d", n, len(binaryData))
 	}
 

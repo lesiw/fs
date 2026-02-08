@@ -38,7 +38,7 @@ func testWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	buf, err := io.ReadAll(rc)
-	rc.Close()
+	_ = rc.Close()
 	if err != nil {
 		t.Fatalf("read with working directory: %v", err)
 	}
