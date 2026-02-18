@@ -275,7 +275,11 @@ func Clean(path string) string {
 				}
 				// No prefix - allow relative .. paths
 				out = append(out, part)
+			} else if out[len(out)-1] == ".." {
+				// Previous element is also .., can't collapse
+				out = append(out, part)
 			} else {
+				// Previous element is a normal directory, remove it
 				out = out[:len(out)-1]
 			}
 		} else {

@@ -287,6 +287,9 @@ func TestClean(t *testing.T) {
 		{"UnixLocalDot", "./foo", "./foo"},
 		{"UnixLocalDotSlash", "./foo/./bar", "./foo/bar"},
 		{"UnixLocalDotDot", "./foo/../bar", "./bar"},
+		{"UnixDoubleDotDot", "../../foo", "../../foo"},
+		{"UnixTripleDotDot", "../../../foo", "../../../foo"},
+		{"UnixDotDotMiddle", "a/../../b", "../b"},
 
 		// Windows-style
 		{"WindowsSimple", `C:\foo\bar`, `C:\foo\bar`},
