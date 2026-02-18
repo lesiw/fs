@@ -366,11 +366,11 @@ func isRoot(path string, style pathStyle) bool {
 		// C:\, D:\, etc.
 		return len(path) == 3 && path[1] == ':' && path[2] == '\\'
 	case styleURL:
-		protoEnd := strings.Index(path, "://")
-		if protoEnd < 0 {
+		_, after, ok := strings.Cut(path, "://")
+		if !ok {
 			return false
 		}
-		rest := path[protoEnd+3:]
+		rest := after
 		slashCount := strings.Count(rest, "/")
 		if slashCount == 0 {
 			return true
