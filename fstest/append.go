@@ -45,7 +45,7 @@ func testAppendAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	if _, writeErr := f.Write([]byte(" appended")); writeErr != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(%q): %v", " appended", writeErr)
 	}
 
@@ -95,11 +95,11 @@ func testAppendBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	n, err := f.Write(secondHalf)
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(binary): %v", err)
 	}
 	if n != len(secondHalf) {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(binary) = %d bytes, want %d", n, len(secondHalf))
 	}
 
@@ -140,7 +140,7 @@ func testAppendCreatesFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	testData := []byte("created by append")
 	if _, writeErr := f.Write(testData); writeErr != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(%q): %v", testData, writeErr)
 	}
 
@@ -177,7 +177,7 @@ func testAppendCreatesParent(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	testData := []byte("auto-created parents")
 	if _, writeErr := f.Write(testData); writeErr != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write(%q): %v", testData, writeErr)
 	}
 

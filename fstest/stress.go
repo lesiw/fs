@@ -177,9 +177,9 @@ func testConcurrentReads(
 	}
 
 	testFiles := make([]fileInfo, numFiles)
-	for i := 0; i < numFiles; i++ {
+	for i := range numFiles {
 		path := fmt.Sprintf("%s/file%d.txt", testDir, i)
-		content := []byte(fmt.Sprintf("content %d", i))
+		content := fmt.Appendf(nil, "content %d", i)
 		testFiles[i] = fileInfo{path: path, content: content}
 
 		if err := fs.WriteFile(ctx, fsys, path, content); err != nil {
@@ -301,7 +301,7 @@ func testModifyAndRead(
 	appended := []byte(" appended")
 	_, writeErr = f.Write(appended)
 	if writeErr != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("Write() append: %v", writeErr)
 	}
 

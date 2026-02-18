@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -18,6 +19,16 @@ import (
 var testEndpoint string
 
 func TestMain(m *testing.M) {
+	if os.Getenv("CI") != "" {
+		if runtime.GOOS == "windows" {
+			fmt.Fprintln(os.Stderr, "skip: windows containers unsupported")
+			return
+		}
+		if _, err := ctrctl.Version(nil); err != nil {
+			fmt.Fprintln(os.Stderr, "skip: no container runtime available")
+			return
+		}
+	}
 	// Start MinIO container
 	endpoint, err := setupMinIO()
 	if err != nil {

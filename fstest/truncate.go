@@ -143,7 +143,7 @@ func testTruncateBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 			fileName, len(data), len(expected))
 	}
 
-	for i := 0; i < len(expected); i++ {
+	for i := range len(expected) {
 		if data[i] != expected[i] {
 			t.Errorf(
 				"Binary data corrupted at byte %d: got 0x%02x, want 0x%02x",

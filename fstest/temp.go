@@ -155,7 +155,7 @@ func testTempDirPathSeparators(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 		t.Fatalf("Temp(%q) err: %v", prefix, err)
 	}
-	w.Close()
+	_ = w.Close()
 	cleanup(ctx, t, fsys, w.Path())
 
 	name := path.Join(w.Path(), "foo/bar.txt")
