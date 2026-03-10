@@ -74,10 +74,12 @@ func (f *sftpFS) SetBasePath(path string) {
 }
 
 func (f *sftpFS) fullPath(ctx context.Context, name string) string {
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		name = path.Join(workDir, name)
+	if !path.IsAbs(name) {
+		if workDir := fs.WorkDir(ctx); workDir != "" {
+			name = path.Join(workDir, name)
+		}
 	}
-	if f.basePath != "" {
+	if f.basePath != "" && !path.IsAbs(name) {
 		name = path.Join(f.basePath, name)
 	}
 	return name
@@ -436,11 +438,12 @@ func (de *dirEntry) Path() string { return "" }
 
 // Abs implements fs.AbsFS
 func (f *sftpFS) Abs(ctx context.Context, name string) (string, error) {
-	// If already absolute, return as-is
 	if path.IsAbs(name) {
 		return path.Clean(name), nil
 	}
-
-	// Resolve relative to basePath + WorkDir
-	return f.fullPath(ctx, name), nil
+	name = f.fullPath(ctx, name)
+	if !path.IsAbs(name) {
+		name = "/" + name
+	}
+	return path.Clean(name), nil
 }

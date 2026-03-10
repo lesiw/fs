@@ -65,10 +65,12 @@ func (f *sshFS) SetPrefix(prefix string) {
 }
 
 func (f *sshFS) fullPath(ctx context.Context, name string) string {
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		name = path.Join(workDir, name)
+	if !path.IsAbs(name) {
+		if workDir := fs.WorkDir(ctx); workDir != "" {
+			name = path.Join(workDir, name)
+		}
 	}
-	if f.prefix != "" {
+	if f.prefix != "" && !path.IsAbs(name) {
 		name = path.Join(f.prefix, name)
 	}
 	return name

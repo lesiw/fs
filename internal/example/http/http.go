@@ -12,11 +12,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
 // httpFS implements a read-only lesiw.io/fs.FS using HTTP.
@@ -35,6 +35,13 @@ func New(baseURL string) fs.FS {
 	}
 }
 
+func (f *httpFS) fullURL(name string) string {
+	if path.IsAbs(name) {
+		return name
+	}
+	return f.baseURL + "/" + name
+}
+
 // Open implements fs.FS (read-only).
 func (f *httpFS) Open(
 	ctx context.Context, name string,
@@ -47,7 +54,7 @@ func (f *httpFS) Open(
 		}
 	}
 
-	url := f.baseURL + "/" + name
+	url := f.fullURL(name)
 	resp, err := f.client.Get(url)
 	if err != nil {
 		return nil, convertError("open", name, err)
@@ -85,7 +92,7 @@ func (f *httpFS) Stat(
 		}, nil
 	}
 
-	url := f.baseURL + "/" + name
+	url := f.fullURL(name)
 	resp, err := f.client.Head(url)
 	if err != nil {
 		return nil, convertError("stat", name, err)
@@ -168,21 +175,18 @@ func (fi *httpFileInfo) Mode() fs.Mode {
 }
 
 // Abs implements fs.AbsFS
-func (f *httpFS) Abs(ctx context.Context, name string) (string, error) {
-	// Resolve with WorkDir if present
-	fullPath := name
+func (f *httpFS) Abs(
+	ctx context.Context, name string,
+) (string, error) {
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
+	}
 	if workDir := fs.WorkDir(ctx); workDir != "" {
-		fullPath = path.Join(workDir, name)
+		name = path.Join(workDir, name)
 	}
-
-	// Clean the path
-	cleanPath := path.Clean(fullPath)
-
-	// Join with base URL
-	if path.IsAbs(cleanPath) {
-		return f.baseURL + cleanPath, nil
+	name = path.Clean(name)
+	if path.IsAbs(name) {
+		return f.baseURL + name, nil
 	}
-
-	// Relative path - prepend /
-	return f.baseURL + "/" + cleanPath, nil
+	return f.baseURL + "/" + name, nil
 }

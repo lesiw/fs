@@ -154,6 +154,12 @@ func TestFS(
 	t.Run("Walk", func(t *testing.T) {
 		testWalk(ctx, t, fsys, files)
 	})
+	t.Run("FindUp", func(t *testing.T) {
+		testFindUp(ctx, t, fsys, files)
+	})
+	t.Run("FindUpDotDot", func(t *testing.T) {
+		testFindUpDotDot(ctx, t, fsys, files)
+	})
 	t.Run("WorkDir", func(t *testing.T) {
 		testWorkDir(ctx, t, fsys)
 	})

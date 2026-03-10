@@ -46,8 +46,10 @@ func New(url, user, password string) (fs.FS, error) {
 // fullPath resolves the full path by prepending the working directory from
 // context if present.
 func (f *webdavFS) fullPath(ctx context.Context, name string) string {
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		name = path.Join(workDir, name)
+	if !path.IsAbs(name) {
+		if workDir := fs.WorkDir(ctx); workDir != "" {
+			name = path.Join(workDir, name)
+		}
 	}
 	return name
 }

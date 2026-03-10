@@ -14,13 +14,13 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"path"
 	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
 // FS implements fs.FS for S3-compatible object storage.
@@ -53,9 +53,23 @@ func New(
 	}, nil
 }
 
+func (f *s3FS) resolveName(name string) string {
+	if !path.IsAbs(name) {
+		return name
+	}
+	root := "s3://" + f.bucket
+	name = strings.TrimPrefix(name, root)
+	name = strings.TrimPrefix(name, "/")
+	if name == "" {
+		return "."
+	}
+	return name
+}
+
 var _ fs.FS = (*s3FS)(nil)
 
 func (f *s3FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+	name = f.resolveName(name)
 	obj, err := f.client.GetObject(
 		ctx, f.bucket, name, minio.GetObjectOptions{},
 	)
@@ -75,6 +89,7 @@ var _ fs.CreateFS = (*s3FS)(nil)
 func (f *s3FS) Create(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
+	name = f.resolveName(name)
 	return &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -89,6 +104,7 @@ var _ fs.AppendFS = (*s3FS)(nil)
 func (f *s3FS) Append(
 	ctx context.Context, name string,
 ) (io.WriteCloser, error) {
+	name = f.resolveName(name)
 	wc := &s3WriteCloser{
 		ctx:        ctx,
 		client:     f.client,
@@ -168,6 +184,7 @@ func (w *s3WriteCloser) Close() error {
 var _ fs.StatFS = (*s3FS)(nil)
 
 func (f *s3FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
+	name = f.resolveName(name)
 	info, err := f.client.StatObject(
 		ctx, f.bucket, name, minio.StatObjectOptions{},
 	)
@@ -234,6 +251,7 @@ var _ fs.ReadDirFS = (*s3FS)(nil)
 func (f *s3FS) ReadDir(
 	ctx context.Context, name string,
 ) iter.Seq2[fs.DirEntry, error] {
+	name = f.resolveName(name)
 	return func(yield func(fs.DirEntry, error) bool) {
 		// Check if this is a file (not a directory)
 		info, statErr := f.Stat(ctx, name)
@@ -294,6 +312,7 @@ func (f *s3FS) ReadDir(
 var _ fs.RemoveFS = (*s3FS)(nil)
 
 func (f *s3FS) Remove(ctx context.Context, name string) error {
+	name = f.resolveName(name)
 	// Check if this is a virtual directory with children
 	info, statErr := f.Stat(ctx, name)
 	if statErr == nil && info.IsDir() {
@@ -341,26 +360,14 @@ func (f *s3FS) Localize(ctx context.Context, name string) (string, error) {
 
 var _ fs.AbsFS = (*s3FS)(nil)
 
-func (f *s3FS) Abs(ctx context.Context, name string) (string, error) {
-	// If already an s3:// URL, return as-is
-	if strings.HasPrefix(name, "s3://") {
-		return name, nil
+func (f *s3FS) Abs(
+	ctx context.Context, name string,
+) (string, error) {
+	if path.IsAbs(name) {
+		return path.Clean(name), nil
 	}
-
-	// Resolve with WorkDir if present
-	fullPath := name
 	if workDir := fs.WorkDir(ctx); workDir != "" {
-		fullPath = path.Join(workDir, name)
+		name = path.Join(workDir, name)
 	}
-
-	// Clean the path
-	cleanPath := path.Clean(fullPath)
-
-	// Convert to s3:// format
-	if path.IsAbs(cleanPath) {
-		return fmt.Sprintf("s3://%s%s", f.bucket, cleanPath), nil
-	}
-
-	// Relative path - prepend /
-	return fmt.Sprintf("s3://%s/%s", f.bucket, cleanPath), nil
+	return "s3://" + f.bucket + "/" + path.Clean(name), nil
 }

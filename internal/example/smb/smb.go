@@ -75,8 +75,10 @@ func (f *smbFS) Close() error {
 }
 
 func (f *smbFS) fullPath(ctx context.Context, name string) string {
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		name = path.Join(workDir, name)
+	if !path.IsAbs(name) {
+		if workDir := fs.WorkDir(ctx); workDir != "" {
+			name = path.Join(workDir, name)
+		}
 	}
 	return name
 }

@@ -6,12 +6,12 @@ import (
 	"context"
 	"errors"
 	"io"
-	"path"
 	"strings"
 	"sync"
 	"time"
 
 	"lesiw.io/fs"
+	"lesiw.io/fs/path"
 )
 
 var (
@@ -50,8 +50,8 @@ type node struct {
 // resolvePath resolves a path relative to WorkDir if present.
 func resolvePath(ctx context.Context, name string) string {
 	name = path.Clean(name)
-	if workDir := fs.WorkDir(ctx); workDir != "" {
-		name = path.Join(workDir, name)
+	if w := fs.WorkDir(ctx); w != "" && !path.IsAbs(name) {
+		name = path.Join(w, name)
 	}
 	return name
 }
