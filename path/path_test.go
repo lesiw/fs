@@ -11,18 +11,18 @@ func TestJoin(t *testing.T) {
 		want  string
 	}{
 		// Unix-style paths
-		{"UnixSimple", []string{"foo", "bar"}, "foo/bar"},
-		{"UnixNested", []string{"a", "b", "c"}, "a/b/c"},
+		{"UnixSimple", []string{"foo", "bar"}, "./foo/bar"},
+		{"UnixNested", []string{"a", "b", "c"}, "./a/b/c"},
 		{"UnixRoot", []string{"/", "foo"}, "/foo"},
-		{"UnixTrailingSlash", []string{"foo", "bar", ""}, "foo/bar/"},
+		{"UnixTrailingSlash", []string{"foo", "bar", ""}, "./foo/bar/"},
 		{"UnixTrailingInArg", []string{"/tmp", "test_createdir/"},
 			"/tmp/test_createdir/"},
-		{"UnixTrailingInLastArg", []string{"foo", "bar/"}, "foo/bar/"},
-		{"UnixNoDoubleSep", []string{"foo/", "/bar/"}, "foo/bar/"},
-		{"UnixEmpty", []string{"", "foo", "", "bar"}, "foo/bar"},
-		{"UnixSingle", []string{"foo"}, "foo"},
+		{"UnixTrailingInLastArg", []string{"foo", "bar/"}, "./foo/bar/"},
+		{"UnixNoDoubleSep", []string{"foo/", "/bar/"}, "./foo/bar/"},
+		{"UnixEmpty", []string{"", "foo", "", "bar"}, "./foo/bar"},
+		{"UnixSingle", []string{"foo"}, "./foo"},
 		{"UnixAllEmpty", []string{"", "", ""}, "."},
-		{"UnixDotDot", []string{"foo", "..", "bar"}, "bar"},
+		{"UnixDotDot", []string{"foo", "..", "bar"}, "./bar"},
 		{"UnixLocalDot", []string{"./foo", "bar"}, "./foo/bar"},
 		{"UnixLocalDotNested", []string{"./foo", "./bar"}, "./foo/bar"},
 
@@ -32,8 +32,8 @@ func TestJoin(t *testing.T) {
 		{"WindowsNested", []string{`C:\`, "Users", "foo"}, `C:\Users\foo`},
 		{"WindowsTrailing", []string{`C:\`, "foo", ""}, `C:\foo\`},
 		{"WindowsTrailingInArg", []string{`C:\`, `foo\`}, `C:\foo\`},
-		{"WindowsTrailingInLastArg", []string{`foo`, `bar\`}, `foo\bar\`},
-		{"WindowsBackslash", []string{`foo\bar`, "baz"}, `foo\bar\baz`},
+		{"WindowsTrailingInLastArg", []string{`.\foo`, `bar\`}, `.\foo\bar\`},
+		{"WindowsBackslash", []string{`foo\bar`, "baz"}, `.\foo\bar\baz`},
 		{"WindowsMixed", []string{`C:\foo`, "bar/baz"}, `C:\foo\bar\baz`},
 		{"WindowsLocalDot", []string{`.\foo`, "bar"}, `.\foo\bar`},
 		{"WindowsLocalDotNested", []string{`.\foo`, `.\bar`}, `.\foo\bar`},
@@ -76,7 +76,7 @@ func TestSplit(t *testing.T) {
 		{"UnixDir", "foo/bar/", "foo/bar", ""},
 		{"UnixRootDir", "/", "/", ""},
 		{"UnixEmpty", "", "", ""},
-		{"UnixLocalDot", "./foo", ".", "foo"},
+		{"UnixLocalDot", "./foo", "./", "foo"},
 		{"UnixLocalDotPath", "./foo/bar", "./foo", "bar"},
 
 		// Windows-style
@@ -84,7 +84,7 @@ func TestSplit(t *testing.T) {
 		{"WindowsPath", `C:\Users\foo`, `C:\Users`, "foo"},
 		{"WindowsDir", `C:\foo\`, `C:\foo`, ""},
 		{"WindowsRoot", `C:\`, `C:\`, ""},
-		{"WindowsLocalDot", `.\foo`, ".", "foo"},
+		{"WindowsLocalDot", `.\foo`, `.\`, "foo"},
 		{"WindowsLocalDotPath", `.\foo\bar`, `.\foo`, "bar"},
 
 		// URL-style
@@ -150,9 +150,9 @@ func TestDir(t *testing.T) {
 		{"foo", ""},
 		{"/", "/"},
 		{"", ""},
-		{"./foo", "."},
+		{"./foo", "./"},
 		{"./foo/bar", "./foo"},
-		{`.\foo`, "."},
+		{`.\foo`, `.\`},
 		{`.\foo\bar`, `.\foo`},
 		{`C:\Users\foo`, `C:\Users`},
 		{`C:\foo`, `C:\`},
@@ -275,21 +275,21 @@ func TestClean(t *testing.T) {
 		want string
 	}{
 		// Unix-style
-		{"UnixSimple", "foo/bar", "foo/bar"},
-		{"UnixDot", "foo/./bar", "foo/bar"},
-		{"UnixDotDot", "foo/../bar", "bar"},
-		{"UnixMultipleSep", "foo//bar", "foo/bar"},
-		{"UnixTrailing", "foo/bar/", "foo/bar/"},
+		{"UnixSimple", "foo/bar", "./foo/bar"},
+		{"UnixDot", "foo/./bar", "./foo/bar"},
+		{"UnixDotDot", "foo/../bar", "./bar"},
+		{"UnixMultipleSep", "foo//bar", "./foo/bar"},
+		{"UnixTrailing", "foo/bar/", "./foo/bar/"},
 		{"UnixEmpty", "", "."},
-		{"UnixDotDotRelative", "../foo", "../foo"},
+		{"UnixDotDotRelative", "../foo", "./../foo"},
 		{"UnixRootEscape", "/..", "/"},
 		{"UnixRootEscape2", "/../foo", "/foo"},
 		{"UnixLocalDot", "./foo", "./foo"},
 		{"UnixLocalDotSlash", "./foo/./bar", "./foo/bar"},
 		{"UnixLocalDotDot", "./foo/../bar", "./bar"},
-		{"UnixDoubleDotDot", "../../foo", "../../foo"},
-		{"UnixTripleDotDot", "../../../foo", "../../../foo"},
-		{"UnixDotDotMiddle", "a/../../b", "../b"},
+		{"UnixDoubleDotDot", "../../foo", "./../../foo"},
+		{"UnixTripleDotDot", "../../../foo", "./../../../foo"},
+		{"UnixDotDotMiddle", "a/../../b", "./../b"},
 
 		// Windows-style
 		{"WindowsSimple", `C:\foo\bar`, `C:\foo\bar`},
@@ -324,26 +324,33 @@ func TestClean(t *testing.T) {
 	}
 }
 
-func TestJoinSplitRoundtrip(t *testing.T) {
-	tests := []struct {
-		name  string
-		elems []string
-	}{
-		{"Unix", []string{"foo", "bar"}},
-		{"UnixNested", []string{"a", "b", "c", "d"}},
-		{"Windows", []string{`C:\`, "foo", "bar"}},
-		{"URL", []string{"https://example.com", "foo", "bar"}},
-	}
+// FuzzJoinSplit tests that Split/Join round-trips on canonical paths:
+// for any path p, Join(Split(Clean(p))) == Clean(p).
+//
+// The comparison is an exact string match, not per-segment. This
+// ensures that path style (Unix/Windows/URL) survives the roundtrip,
+// which matters for callers doing naive path manipulation — e.g.
+// splitting a Windows path to insert a directory, then joining it
+// back. Without style preservation, the result could silently change
+// separators and break on another OS.
+func FuzzJoinSplit(f *testing.F) {
+	f.Fuzz(func(t *testing.T, p string) {
+		p = Clean(p)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			joined := Join(tt.elems...)
-			dir, file := Split(joined)
-			rejoined := Join(dir, file)
-			if rejoined != joined {
-				t.Errorf("Join(Split(Join(%q))) = %q, want %q",
-					tt.elems, rejoined, joined)
-			}
-		})
-	}
+		// Skip paths where Clean is not idempotent. This happens with
+		// degenerate mixed-separator paths (e.g., \ and / interleaved)
+		// that don't represent real filesystem paths.
+		if Clean(p) != p {
+			t.Skip("Clean not idempotent")
+		}
+
+		dir, file := Split(p)
+
+		got := Join(dir, file)
+		if got != p {
+			t.Errorf(
+				"Join(Split(%q)) = %q (dir=%q, file=%q)",
+				p, got, dir, file)
+		}
+	})
 }

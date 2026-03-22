@@ -126,6 +126,7 @@ func walkDirAsTar(
 func createTarFromFS(
 	ctx context.Context, fsys FS, dir string, w io.Writer,
 ) error {
+	dir = path.Clean(dir)
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
