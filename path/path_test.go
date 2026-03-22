@@ -1,6 +1,8 @@
 package path
 
 import (
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -322,6 +324,250 @@ func TestClean(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSegments(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want []string
+	}{
+		// Unix-style
+		{"UnixRel", "foo/bar", []string{"foo", "bar"}},
+		{"UnixAbs", "/foo/bar", []string{"foo", "bar"}},
+		{"UnixNested", "/a/b/c/d", []string{"a", "b", "c", "d"}},
+		{"UnixDotDot", "../foo", []string{"..", "foo"}},
+		{"UnixDoubleDotDot", "../../foo", []string{"..", "..", "foo"}},
+		{"UnixLocalDot", "./foo/bar", []string{"foo", "bar"}},
+		{"UnixDot", ".", nil},
+		{"UnixEmpty", "", nil},
+		{"UnixRoot", "/", nil},
+		{"UnixSingle", "foo", []string{"foo"}},
+		{"UnixTrailing", "foo/bar/", []string{"foo", "bar"}},
+
+		// Windows-style
+		{"WinAbs", `C:\foo\bar`, []string{"foo", "bar"}},
+		{"WinRoot", `C:\`, nil},
+		{"WinRel", `foo\bar`, []string{"foo", "bar"}},
+		{"WinLocalDot", `.\foo\bar`, []string{"foo", "bar"}},
+		{"WinTrailing", `foo\bar\`, []string{"foo", "bar"}},
+
+		// URL-style
+		{"URLPath", "https://example.com/foo/bar",
+			[]string{"foo", "bar"}},
+		{"URLRoot", "https://example.com/", nil},
+		{"URLRootNoSlash", "https://example.com", nil},
+		{"URLS3", "s3://bucket/key/path",
+			[]string{"key", "path"}},
+
+		// Mixed separators: first separator determines style.
+		{"MixedFwdFirst", `./foo\bar`, []string{`foo\bar`}},
+		{"MixedBackFirst", `.\foo/bar`, []string{"foo/bar"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := segments(tt.path)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("segments(%q) = %v, want %v",
+					tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRel(t *testing.T) {
+	tests := []struct {
+		name    string
+		base    string
+		targ    string
+		want    string
+		wantErr bool
+	}{
+		// Unix-style: same directory
+		{"UnixIdentity", "/a/b", "/a/b", ".", false},
+		{"UnixDotIdentity", ".", ".", ".", false},
+		{"UnixEmptyIdentity", "", "", ".", false},
+
+		// Unix-style: relative paths
+		{"UnixRelSimple", "a", "b", "../b", false},
+		{"UnixRelNested", "a/b", "a/c", "../c", false},
+		{"UnixRelDeeper", "a/b", "a/b/c", "c", false},
+		{"UnixRelUp", "a/b/c", "a/b", "..", false},
+		{"UnixRelUpTwo", "a/b/c", "a", "../..", false},
+		{"UnixRelNoCommon", "a/b", "c/d", "../../c/d", false},
+		{"UnixRelDotBase", ".", "a/b", "a/b", false},
+		{"UnixRelDotTarg", "a/b", ".", "../..", false},
+		{"UnixRelDotDotCommon", "../a", "../b", "../b", false},
+		{"UnixRelLocalDot", "./a", "./b", "../b", false},
+		{"UnixRelLocalDotMixed", "./a", "b", "../b", false},
+
+		// Unix-style: absolute paths
+		{"UnixAbsSimple", "/a/b", "/a/c", "../c", false},
+		{"UnixAbsChild", "/a/b", "/a/b/c", "c", false},
+		{"UnixAbsParent", "/a/b/c", "/a/b", "..", false},
+		{"UnixAbsNoCommon", "/a/b", "/c/d", "../../c/d", false},
+		{"UnixAbsRoot", "/", "/a/b", "a/b", false},
+		{"UnixAbsToRoot", "/a/b", "/", "../..", false},
+
+		// Unix-style: errors
+		{"UnixMixed", "/a", "b", "", true},
+		{"UnixMixedReverse", "a", "/b", "", true},
+		{"UnixDotDotBase", "../../a", "../b", "", true},
+
+		// Windows-style: same drive
+		{"WinSameDrive", `C:\a\b`, `C:\a\c`, `..\c`, false},
+		{"WinChild", `C:\a\b`, `C:\a\b\c`, `c`, false},
+		{"WinParent", `C:\a\b\c`, `C:\a\b`, `..`, false},
+		{"WinRoot", `C:\`, `C:\a\b`, `a\b`, false},
+		{"WinToRoot", `C:\a\b`, `C:\`, `..\..`, false},
+		{"WinCaseInsensitiveDrive", `C:\a`, `c:\a\b`, `b`, false},
+
+		// Windows-style: errors
+		{"WinDiffDrive", `C:\a`, `D:\a`, "", true},
+
+		// URL-style: same host
+		{"URLSameHost", "https://example.com/a/b",
+			"https://example.com/a/c", "../c", false},
+		{"URLChild", "https://example.com/a",
+			"https://example.com/a/b", "b", false},
+		{"URLParent", "https://example.com/a/b",
+			"https://example.com/a", "..", false},
+		{"URLRoot", "https://example.com",
+			"https://example.com/a/b", "a/b", false},
+		{"URLRootSlash", "https://example.com/",
+			"https://example.com/a", "a", false},
+		{"URLToRoot", "https://example.com/a",
+			"https://example.com", "..", false},
+		{"URLS3SameBucket", "s3://bucket/a/b",
+			"s3://bucket/a/c", "../c", false},
+		{"URLCaseInsensitiveHost", "https://Example.Com/a",
+			"https://example.com/a/b", "b", false},
+
+		// URL-style: errors
+		{"URLDiffHost", "https://a.com/foo",
+			"https://b.com/foo", "", true},
+		{"URLDiffProto", "https://example.com/a",
+			"http://example.com/a", "", true},
+		{"URLS3DiffBucket", "s3://bucket1/key",
+			"s3://bucket2/key", "", true},
+
+		// Mixed absolute styles: errors (different filesystems)
+		{"MixedAbsUnixWin", "/unix/path", `C:\win\path`, "", true},
+		{"MixedAbsWinUnix", `C:\win\path`, "/unix/path", "", true},
+		{"MixedAbsUnixURL", "/unix/path",
+			"https://example.com/foo", "", true},
+		{"MixedAbsURLUnix", "https://example.com/foo",
+			"/unix/path", "", true},
+		{"MixedAbsWinURL", `C:\win\path`,
+			"https://example.com/foo", "", true},
+		{"MixedAbsURLWin", "https://example.com/foo",
+			`C:\win\path`, "", true},
+
+		// Mixed separators in relative paths: uses basepath's style
+		{"MixedSepBaseUnix", "./foo", `bar\baz`, "../bar/baz", false},
+		{"MixedSepBaseWin", `.\foo`, "bar/baz", `..\bar\baz`, false},
+		{"MixedSepRelUnix", "foo/bar", `baz\qux`, "../../baz/qux", false},
+		{"MixedSepRelWin", `foo\bar`, "baz/qux", `..\..\baz\qux`, false},
+		{"MixedSepChild", "foo", `foo\bar`, "bar", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Rel(tt.base, tt.targ)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Rel(%q, %q) = %q, want error",
+						tt.base, tt.targ, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Rel(%q, %q) error: %v",
+					tt.base, tt.targ, err)
+			}
+			if got != tt.want {
+				t.Errorf("Rel(%q, %q) = %q, want %q",
+					tt.base, tt.targ, got, tt.want)
+			}
+
+			// Verify roundtrip: Join(base, Rel(base, targ))
+			// must produce equivalent segments to targ.
+			gotSeg := segments(Join(tt.base, got))
+			wantSeg := segments(tt.targ)
+			if !slices.Equal(gotSeg, wantSeg) {
+				t.Errorf(
+					"roundtrip: segments(Join(%q, %q)) = %v, want %v",
+					tt.base, got, gotSeg, wantSeg,
+				)
+			}
+		})
+	}
+}
+
+func TestVolume(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"Unix", "/foo/bar", ""},
+		{"UnixRoot", "/", ""},
+		{"UnixRel", "foo/bar", ""},
+		{"WinDrive", `C:\foo\bar`, "C:"},
+		{"WinRoot", `C:\`, "C:"},
+		{"WinLower", `c:\foo`, "c:"},
+		{"WinRel", `foo\bar`, ""},
+		{"URL", "https://example.com/foo", "https://example.com"},
+		{"URLRoot", "https://example.com/", "https://example.com"},
+		{"URLNoSlash", "https://example.com", "https://example.com"},
+		{"S3", "s3://bucket/key", "s3://bucket"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			style := detectStyle([]string{tt.path})
+			got := volume(tt.path, style)
+			if got != tt.want {
+				t.Errorf(
+					"volume(%q) = %q, want %q",
+					tt.path, got, tt.want,
+				)
+			}
+		})
+	}
+}
+
+// FuzzRel tests the roundtrip property with arbitrary inputs: for any pair
+// where Rel succeeds, joining base with the result must yield the same
+// segments as targ.
+func FuzzRel(f *testing.F) {
+	f.Fuzz(func(t *testing.T, base, targ string) {
+		base = Clean(base)
+		targ = Clean(targ)
+
+		// A forward slash cannot appear in a filename on any real
+		// filesystem. A backslash in a segment is valid on Unix but
+		// becomes a separator when mixed with Windows-style paths.
+		// Skip these impossible cross-style filenames.
+		for _, seg := range append(segments(base), segments(targ)...) {
+			if strings.ContainsAny(seg, `/\`) {
+				t.Skip("segment contains separator character")
+			}
+		}
+
+		rel, err := Rel(base, targ)
+		if err != nil {
+			return
+		}
+		got := segments(Join(base, rel))
+		want := segments(targ)
+		if !slices.Equal(got, want) {
+			t.Errorf(
+				"Rel(%q, %q) = %q; segments(Join) = %v, want %v",
+				base, targ, rel, got, want)
+		}
+	})
 }
 
 // FuzzJoinSplit tests that Split/Join round-trips on canonical paths:

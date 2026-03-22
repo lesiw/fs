@@ -20,6 +20,7 @@
 package path
 
 import (
+	"fmt"
 	stdpath "path"
 	"strings"
 )
@@ -357,6 +358,124 @@ func Clean(path string) string {
 	}
 
 	return result
+}
+
+// Rel returns a relative path that is lexically equivalent to targpath when
+// joined to basepath with an intervening separator. That is,
+// Join(basepath, Rel(basepath, targpath)) is equivalent to targpath itself.
+// On success, the returned path will always be relative to basepath,
+// even if basepath and targpath share no elements.
+// An error is returned if targpath can't be made relative to basepath or if
+// knowing the current working directory would be necessary to compute it.
+//
+// The result uses basepath's detected separator style. When basepath has no
+// strong style signal (no backslashes, drive letters, or URL protocols),
+// Unix style is used.
+//
+// Rel calls [Clean] on the result.
+func Rel(basepath, targpath string) (string, error) {
+	baseSeg, targSeg := segments(basepath), segments(targpath)
+	baseAbs, targAbs := IsAbs(basepath), IsAbs(targpath)
+
+	if baseAbs != targAbs {
+		return "", fmt.Errorf(
+			"Rel: can't make %s relative to %s", targpath, basepath,
+		)
+	}
+
+	if baseAbs {
+		baseVol := volume(Clean(basepath), detectStyle([]string{basepath}))
+		targVol := volume(Clean(targpath), detectStyle([]string{targpath}))
+		if !strings.EqualFold(baseVol, targVol) {
+			return "", fmt.Errorf(
+				"Rel: can't make %s relative to %s", targpath, basepath,
+			)
+		}
+	}
+
+	// Find the longest common prefix.
+	var common int
+	for common < min(len(baseSeg), len(targSeg)) &&
+		baseSeg[common] == targSeg[common] {
+		common++
+	}
+
+	// A ".." at the divergence point in base means the relative path
+	// cannot be determined without knowing the working directory.
+	if common < len(baseSeg) && baseSeg[common] == ".." {
+		return "", fmt.Errorf(
+			"Rel: can't make %s relative to %s", targpath, basepath,
+		)
+	}
+
+	// Build result: ".." for each remaining base segment, then remaining
+	// target segments.
+	result := make([]string, 0, len(baseSeg)-common+len(targSeg)-common)
+	for range len(baseSeg) - common {
+		result = append(result, "..")
+	}
+	result = append(result, targSeg[common:]...)
+
+	if len(result) == 0 {
+		return ".", nil
+	}
+
+	style := detectStyle([]string{basepath})
+	return strings.Join(result, string(style.sep)), nil
+}
+
+// segments returns the individual elements of path after cleaning.
+// Unlike splitAll, which preserves roots and prefixes for reassembly,
+// segments strips volume names, root separators, local prefixes (./ or .\),
+// and trailing separators. This makes it suitable for comparing path
+// hierarchies (e.g. in [Rel]). Returns nil for empty paths and
+// current-directory references.
+func segments(p string) []string {
+	if p == "" {
+		return nil
+	}
+	p = Clean(p)
+	style := detectStyle([]string{p})
+	sep := string(style.sep)
+
+	vol := volume(p, style)
+	p = p[len(vol):]
+	p = strings.TrimPrefix(p, sep)
+	p = strings.TrimPrefix(p, "."+sep)
+	p = strings.TrimSuffix(p, sep)
+
+	if p == "" || p == "." {
+		return nil
+	}
+
+	return strings.Split(p, sep)
+}
+
+// volume returns the volume name for the given path and style.
+// For Windows paths, this is the drive letter (e.g. "C:").
+// For URL paths, this is the protocol and host (e.g. "https://example.com").
+// For Unix paths, the volume is always empty.
+func volume(p string, style pathStyle) string {
+	switch style.kind {
+	case styleURL:
+		protoEnd := strings.Index(p, "://")
+		if protoEnd < 0 {
+			return ""
+		}
+		hostStart := protoEnd + 3
+		slashIdx := strings.Index(p[hostStart:], "/")
+		if slashIdx < 0 {
+			return p
+		}
+		return p[:hostStart+slashIdx]
+	case styleWindows:
+		if len(p) >= 2 && p[1] == ':' && isDriveLetter(p[0]) {
+			return p[:2]
+		}
+		return ""
+	default:
+		return ""
+	}
 }
 
 func isDriveLetter(b byte) bool {
