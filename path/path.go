@@ -37,10 +37,10 @@ import (
 //
 // Examples:
 //
-//	Join("foo", "bar")                     // "foo/bar"
+//	Join("foo", "bar")                     // "./foo/bar"
 //	Join("C:\\", "foo", "bar")             // "C:\foo\bar"
 //	Join("https://example.com", "foo")     // "https://example.com/foo"
-//	Join("foo", "bar", "")                 // "foo/bar/"
+//	Join("foo", "bar", "")                 // "./foo/bar/"
 func Join(elem ...string) string {
 	if len(elem) == 0 {
 		return ""
@@ -371,8 +371,6 @@ func Clean(path string) string {
 // The result uses basepath's detected separator style. When basepath has no
 // strong style signal (no backslashes, drive letters, or URL protocols),
 // Unix style is used.
-//
-// Rel calls [Clean] on the result.
 func Rel(basepath, targpath string) (string, error) {
 	baseSeg, targSeg := segments(basepath), segments(targpath)
 	baseAbs, targAbs := IsAbs(basepath), IsAbs(targpath)
