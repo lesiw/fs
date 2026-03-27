@@ -45,6 +45,7 @@ type node struct {
 	modTime time.Time
 	dir     bool
 	nodes   map[string]*node
+	target  string // symlink target
 }
 
 // resolvePath resolves a path relative to WorkDir if present.
@@ -56,9 +57,24 @@ func resolvePath(ctx context.Context, name string) string {
 	return name
 }
 
-// walk traverses the tree to find a node at the given path.
-// Returns the node and true if found, nil and false otherwise.
+// walk traverses the tree to find a node at the given path,
+// following symlinks.
 func (f *memFS) walk(name string) (*node, bool) {
+	return f.resolve(name, true, 0)
+}
+
+// walkNoFollow is like walk but does not follow the final symlink.
+func (f *memFS) walkNoFollow(name string) (*node, bool) {
+	return f.resolve(name, false, 0)
+}
+
+// resolve traverses the tree to find a node at the given path.
+// If follow is true, symlinks at the final component are followed.
+// Symlinks in intermediate components are always followed.
+func (f *memFS) resolve(name string, follow bool, depth int) (*node, bool) {
+	if depth > 255 {
+		return nil, false
+	}
 	if name == "." || name == "" || name == "/" {
 		return f.node, true
 	}
@@ -66,18 +82,31 @@ func (f *memFS) walk(name string) (*node, bool) {
 	parts := strings.Split(name, "/")
 	current := f.node
 
-	for _, part := range parts {
+	for i, part := range parts {
 		if part == "" || part == "." {
 			continue
 		}
 		if !current.dir {
 			return nil, false
 		}
-		next, ok := current.nodes[part]
+		child, ok := current.nodes[part]
 		if !ok {
 			return nil, false
 		}
-		current = next
+		last := i == len(parts)-1
+		if child.target != "" && (follow || !last) {
+			target := child.target
+			if !path.IsAbs(target) {
+				parent := path.Join(parts[:i]...)
+				target = path.Join(parent, target)
+			}
+			if !last {
+				remaining := path.Join(parts[i+1:]...)
+				target = path.Join(target, remaining)
+			}
+			return f.resolve(target, follow, depth+1)
+		}
+		current = child
 	}
 
 	return current, true
