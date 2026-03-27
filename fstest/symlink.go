@@ -1,6 +1,7 @@
 package fstest
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -51,7 +52,7 @@ func testSymlinkFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 		t.Fatalf("ReadFile(%q) through symlink: %v", linkName, readErr)
 	}
 
-	if string(data) != string(testData) {
+	if !bytes.Equal(data, testData) {
 		t.Errorf(
 			"ReadFile(%q) through symlink = %q, want %q",
 			linkName, data, testData,
@@ -127,7 +128,7 @@ func testReadlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 		t.Fatalf("Readlink(%q): %v", linkName, err)
 	}
 
-	if target != targetFile {
+	if !pathsEqual([]string{target}, []string{targetFile}) {
 		t.Errorf(
 			"Readlink(%q) = %q, want %q", linkName, target, targetFile,
 		)
