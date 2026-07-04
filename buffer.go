@@ -68,6 +68,7 @@ func (br *bufferReader) Close() error {
 
 // CreateBuffer returns a lazy-executing writer for the file at name.
 // The file is created on first Write(), not when CreateBuffer is called.
+// Name follows the same rules as [Create].
 //
 // Example:
 //
@@ -81,6 +82,7 @@ func CreateBuffer(
 // AppendBuffer returns a lazy-executing writer for appending to the file at
 // name. The file is opened for appending on first Write(), not when
 // AppendBuffer is called.
+// Name follows the same rules as [Append].
 //
 // Example:
 //
@@ -106,19 +108,9 @@ type bufferWriter struct {
 
 func (bw *bufferWriter) init() {
 	if bw.create {
-		cfs, ok := bw.fsys.(CreateFS)
-		if !ok {
-			bw.err = ErrUnsupported
-			return
-		}
-		bw.w, bw.err = cfs.Create(bw.ctx, bw.name)
+		bw.w, bw.err = Create(bw.ctx, bw.fsys, bw.name)
 	} else {
-		afs, ok := bw.fsys.(AppendFS)
-		if !ok {
-			bw.err = ErrUnsupported
-			return
-		}
-		bw.w, bw.err = afs.Append(bw.ctx, bw.name)
+		bw.w, bw.err = Append(bw.ctx, bw.fsys, bw.name)
 	}
 }
 

@@ -260,6 +260,84 @@ func TestAppendBuffer(t *testing.T) {
 	}
 }
 
+func TestCreateBufferDir(t *testing.T) {
+	ctx, fsys := context.Background(), memfs.New()
+
+	err := fs.WriteFile(ctx, fsys, "src/a.txt", []byte("alpha"))
+	if err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	r, err := fs.Open(ctx, fsys, "src/")
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	closeOnCleanup(t, r)
+
+	w := fs.CreateBuffer(ctx, fsys, "dst/")
+	closeOnCleanup(t, w)
+
+	if _, err := io.Copy(w, r); err != nil {
+		t.Fatalf("Copy() error = %v", err)
+	}
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	out, err := fs.ReadFile(ctx, fsys, "dst/a.txt")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+
+	if got, want := string(out), "alpha"; got != want {
+		t.Errorf("ReadFile() = %q, want %q", got, want)
+	}
+}
+
+func TestAppendBufferDir(t *testing.T) {
+	ctx, fsys := context.Background(), memfs.New()
+
+	err := fs.WriteFile(ctx, fsys, "dst/old.txt", []byte("old"))
+	if err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	err = fs.WriteFile(ctx, fsys, "src/new.txt", []byte("new"))
+	if err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	r, err := fs.Open(ctx, fsys, "src/")
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	closeOnCleanup(t, r)
+
+	w := fs.AppendBuffer(ctx, fsys, "dst/")
+	closeOnCleanup(t, w)
+
+	if _, err := io.Copy(w, r); err != nil {
+		t.Fatalf("Copy() error = %v", err)
+	}
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	for name, want := range map[string]string{
+		"dst/old.txt": "old",
+		"dst/new.txt": "new",
+	} {
+		out, err := fs.ReadFile(ctx, fsys, name)
+		if err != nil {
+			t.Fatalf("ReadFile(%q) error = %v", name, err)
+		}
+		if got := string(out); got != want {
+			t.Errorf("ReadFile(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
 func TestBufferCopy(t *testing.T) {
 	ctx, fsys := context.Background(), memfs.New()
 
