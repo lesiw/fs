@@ -85,3 +85,27 @@ func ExampleDirMode() {
 	// Output:
 	// Mode: 0700
 }
+
+func TestWithoutWorkDir(t *testing.T) {
+	ctx := fs.WithWorkDir(t.Context(), "/some/dir")
+	ctx = fs.WithoutWorkDir(ctx)
+	if got := fs.WorkDir(ctx); got != "" {
+		t.Errorf("WorkDir() = %q, want %q", got, "")
+	}
+}
+
+func TestWithWorkDirEmptyIsNoop(t *testing.T) {
+	ctx := fs.WithWorkDir(t.Context(), "/some/dir")
+	ctx = fs.WithWorkDir(ctx, "")
+	if got, want := fs.WorkDir(ctx), "/some/dir"; got != want {
+		t.Errorf("WorkDir() = %q, want %q", got, want)
+	}
+}
+
+func TestWithWorkDirRelativeComposes(t *testing.T) {
+	ctx := fs.WithWorkDir(t.Context(), "/some/dir")
+	ctx = fs.WithWorkDir(ctx, "sub")
+	if got, want := fs.WorkDir(ctx), "/some/dir/sub"; got != want {
+		t.Errorf("WorkDir() = %q, want %q", got, want)
+	}
+}

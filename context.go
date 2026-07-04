@@ -56,17 +56,29 @@ func FileMode(ctx context.Context) Mode {
 //
 // If dir is relative and ctx already has a working directory, WithWorkDir
 // composes them, like cd. If dir is absolute, it replaces any existing
-// working directory.
+// working directory. If dir is empty, the working directory is
+// unchanged; use [WithoutWorkDir] to clear it.
 //
 // If no working directory is set, implementations should use their default
 // working directory (typically the current working directory).
 func WithWorkDir(ctx context.Context, dir string) context.Context {
-	if path.IsAbs(dir) {
-		return context.WithValue(ctx, workDirKey, dir)
-	} else if prev := WorkDir(ctx); prev != "" {
-		dir = path.Join(prev, dir)
+	if dir == "" {
+		return ctx
+	}
+	if !path.IsAbs(dir) {
+		if prev := WorkDir(ctx); prev != "" {
+			dir = path.Join(prev, dir)
+		}
 	}
 	return context.WithValue(ctx, workDirKey, dir)
+}
+
+// WithoutWorkDir returns a context with any working directory cleared.
+// This is similar to [context.WithoutCancel]: all other context values
+// are preserved, and relative paths resolve from the implementation's
+// default working directory again.
+func WithoutWorkDir(ctx context.Context) context.Context {
+	return context.WithValue(ctx, workDirKey, "")
 }
 
 // WorkDir retrieves the working directory from context.
