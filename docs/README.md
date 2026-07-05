@@ -1,99 +1,109 @@
 # lesiw.io/fs
 
 [![Go Reference](https://pkg.go.dev/badge/lesiw.io/fs.svg)](https://pkg.go.dev/lesiw.io/fs)
+[![CI](https://github.com/lesiw/fs/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/lesiw/fs/actions/workflows/main.yml)
+[![License](https://img.shields.io/github/license/lesiw/fs)](../LICENSE)
 
-A filesystem abstraction for Go that extends io/fs with write operations and context support.
+A filesystem abstraction for Go that extends `io/fs` with write
+operations and context support. The same code reads and writes local
+disks, in-memory filesystems, and remote systems reached over SSH,
+S3, SMB, or WebDAV.
 
-## Features
+```go
+// Copying between filesystems is io.Copy of standard interfaces.
+w, err := fs.Create(ctx, remote, "backup.tar.gz")
+if err != nil {
+    return err
+}
+defer w.Close()
+r, err := fs.Open(ctx, local, "backup.tar.gz")
+if err != nil {
+    return err
+}
+defer r.Close()
+_, err = io.Copy(w, r)
+```
 
-* **Context support:** Cancellation, timeouts, and deadlines for remote filesystems.
-* **Full read/write capabilities** via optional interfaces beyond io/fs's read-only model.
-* **Standard io interfaces:** Returns `io.ReadCloser` and `io.WriteCloser`, not custom File types.
-* **Bulk operations** with tar streams for efficient directory transfers over high-latency connections.
-* **Virtual directories** to simplify writing nested paths across different storage backends.
-* **Fallback implementations** provide compatibility when native operations aren't available.
-* **Range-over-func iterators** for natural error handling and early termination in directory traversals.
+[API reference](https://pkg.go.dev/lesiw.io/fs) ·
+[Source](https://github.com/lesiw/fs)
 
-### Feature Matrix
+## The model
+
+1. **`FS` is one method.** `Open(ctx, name) (io.ReadCloser, error)`.
+   Files are standard `io` values, never a custom `File` type.
+2. **Every other capability is an optional interface** discovered
+   by type assertion, in the manner of `io/fs`.
+3. **Helper functions check capabilities and fall back**, so portable
+   code calls one function either way.
+4. **The context carries the operation's ambience** — cancellation
+   and timeouts, file and directory modes, the working directory.
+5. **A trailing slash means a directory, and directories are tar
+   streams.**
+
+## Feature matrix
 
 | Capability | io/fs | os | lesiw.io/fs |
 |------------|:-----:|:--:|:-----------:|
 | **Read files** | ✅ | ✅ | ✅ |
 | **Write files** | ❌ | ✅ | ✅ |
 | **Create/remove directories** | ❌ | ✅ | ✅ |
-| **Metadata (stat, chmod)** | ✅ | ✅ | ✅ |
-| **Symbolic links** | ✅ | ✅ | ✅ |
-| **Standard io primitives** | ✅ | ❌ | ✅ |
+| **Read metadata (stat)** | ✅ | ✅ | ✅ |
+| **Write metadata (chmod, chtimes)** | ❌ | ✅ | ✅ |
+| **Create symbolic links** | ❌ | ✅ | ✅ |
+| **io interfaces, not File types** | ❌ | ❌ | ✅ |
 | **Fallback implementations** | ✅ | ❌ | ✅ |
 | **Context support** | ❌ | ❌ | ✅ |
 | **Bulk operations (tar)** | ❌ | ❌ | ✅ |
 | **Virtual directories** | ❌ | ❌ | ✅ |
 | **Range-over-func iterators** | ❌ | ❌ | ✅ |
 
-## Installation
+## Install
 
-```bash
+```sh
 go get lesiw.io/fs
 ```
 
-## Quick Start
+Requires Go 1.24.2 or later.
 
-[▶️ Run this example on the Go Playground](https://go.dev/play/p/c2sE72n-j-z)
-
-Write and read files with context support for cancellation and timeouts:
+## Quick start
 
 ```go
 package main
 
 import (
     "context"
+    "fmt"
     "log"
-    "math/rand/v2"
 
     "lesiw.io/fs"
     "lesiw.io/fs/memfs"
-    "lesiw.io/fs/osfs"
-)
-
-var (
-    ctx    = context.Background()
-    fsyses = []struct {
-        name string
-        fn   func() fs.FS
-    }{
-        {"os", osfs.NewTemp},
-        {"mem", memfs.New},
-    }
-    pick = fsyses[rand.IntN(len(fsyses))]
 )
 
 func main() {
-    println("picked", pick.name)
-    fsys := pick.fn()
+    ctx, fsys := context.Background(), memfs.New()
     defer fs.Close(fsys)
 
-    // Write a file.
-    data := []byte("Hello, world!")
-    if err := fs.WriteFile(ctx, fsys, "hello.txt", data); err != nil {
+    err := fs.WriteFile(ctx, fsys, "hello.txt", []byte("Hello, world!"))
+    if err != nil {
         log.Fatal(err)
     }
 
-    // Read it back.
     content, err := fs.ReadFile(ctx, fsys, "hello.txt")
     if err != nil {
         log.Fatal(err)
     }
-    println(string(content))
-
-    // Output: Hello, world!
+    fmt.Println(string(content))
 }
 ```
 
-## Capabilities Are Interfaces
+> [!TIP]
+> The in-memory filesystem runs in the Go Playground, so the package
+> can be tried without installing anything:
+> [run an example](https://go.dev/play/p/c2sE72n-j-z).
 
-This package follows io/fs's philosophy: minimal core interface with optional capabilities discovered through type assertions.
+## Capabilities are interfaces
 
-The core `FS` interface requires only one method:
+The core interface requires one method.
 
 ```go
 type FS interface {
@@ -101,163 +111,138 @@ type FS interface {
 }
 ```
 
-All other capabilities are optional interfaces:
-
-```go
-// Create opens a file for writing, truncating if it exists
-type CreateFS interface {
-    FS
-    Create(ctx context.Context, name string) (io.WriteCloser, error)
-}
-
-// Mkdir creates a new directory
-type MkdirFS interface {
-    FS
-    Mkdir(ctx context.Context, name string) error
-}
-
-// Stat returns file metadata
-type StatFS interface {
-    FS
-    Stat(ctx context.Context, name string) (FileInfo, error)
-}
-```
-
-### Building on Capabilities
-
-Implementations can support as few or as many capabilities as make sense. Helper functions automatically check capabilities and return `ErrUnsupported` when unavailable:
+Everything else is an optional interface an implementation may add —
+`CreateFS` for writing, `MkdirFS` for directories, `StatFS` for
+metadata, two dozen in all. Helper functions probe for the
+capability and report `fs.ErrUnsupported` when an operation has no
+path forward.
 
 ```go
 w, err := fs.Create(ctx, fsys, "file.txt")
 if errors.Is(err, fs.ErrUnsupported) {
-    // Filesystem is read-only
+    // Filesystem is read-only.
 }
 ```
 
-### Fallback Implementations
+Many helpers carry fallbacks, so an implementation supplies the
+operations it can do natively and inherits the rest. `Append` falls
+back to read-and-rewrite, `Rename` to copy-and-delete, `Walk` and
+`ReadDir` to each other, and directory-as-tar operations to
+`archive/tar` over a filesystem walk.
 
-When native support is unavailable, operations may provide fallback implementations:
+## Context values
 
-* `Append` falls back to reading the existing file and rewriting it with the new content appended when unsupported.
-* `Rename` falls back to copying and deleting when unsupported.
-* `Truncate` falls back to creating an empty file (size 0) or reading, removing, and recreating the file with adjusted size (non-zero) when unsupported.
-* `ReadDir` calls `Walk` with depth 1 when unsupported.
-* `Walk` recursively calls `ReadDir` when unsupported.
-* `Temp` creates temporary directories with random names when `TempDirFS` is unsupported.
-* Directory operations (trailing slash) use `archive/tar` when native tar commands aren't available.
+Cancellation and deadlines work the way they do everywhere else in
+Go, which matters most when the filesystem is on the far side of a
+network.
 
-These fallbacks maintain code portability across implementations while allowing native optimizations.
+```go
+ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+defer cancel()
+data, err := fs.ReadFile(ctx, remote, "large-file.dat")
+```
 
-## Virtual Directories
-
-Write files to nested paths without manually creating parent directories:
+File and directory modes travel on the context too, where they apply
+to every operation in a chain — including parent directories created
+implicitly along the way.
 
 ```go
 ctx = fs.WithFileMode(ctx, 0600)
 ctx = fs.WithDirMode(ctx, 0700)
-
-// Automatically creates "logs/2025/" with mode 0700 if needed
-fs.WriteFile(ctx, fsys, "logs/2025/app.log", data)
+err := fs.WriteFile(ctx, fsys, "logs/2026/app.log", data)
 ```
 
-**Why?** Object stores like S3 use virtual directories (treating paths as object keys), while traditional filesystems require explicit directory creation. Virtual directories work seamlessly across both—traditional filesystems create parent directories with the specified mode before writing files, while object stores ignore directory creation and file modes since they're not supported.
+That call creates `logs/2026/` with mode 0700 when it doesn't exist,
+then writes the file with mode 0600. Object stores treat the nested
+path as a key and skip directory creation; traditional filesystems
+create the parents. The calling code is the same for both.
 
-Context carries file permissions through multiple API calls within a single operation chain—similar to request-scoped credentials or deadlines—without expanding function signatures.
+## Directories are tar streams
 
-## Directory Traversal
-
-Use range-over-func iterators for natural error handling and early termination:
+A trailing slash names a directory, and directories read and write
+as tar archives with the same verbs as files.
 
 ```go
-// Walk directory tree with depth limit
+// Read a directory as an archive, like reading a file.
+r, err := fs.Open(ctx, fsys, "project/")
+
+// Add files to a directory, like appending to a file.
+w, err := fs.Append(ctx, fsys, "project/")
+
+// Empty a directory, like truncating a file.
+err = fs.Truncate(ctx, fsys, "project/", 0)
+
+// Replace a directory's contents, like creating a file.
+w, err = fs.Create(ctx, fsys, "restore/")
+```
+
+Implementations with native tar support (`DirFS`, `AppendDirFS`,
+`TruncateDirFS`) move one stream instead of one request per file;
+without them, the helpers fall back to a filesystem walk with
+`archive/tar`.
+
+## Directory traversal
+
+`Walk` and `ReadDir` are range-over-func iterators, so errors are
+handled in the loop and early termination costs nothing.
+
+```go
 for entry, err := range fs.Walk(ctx, fsys, "project", 3) {
     if err != nil {
         return err
     }
-    fmt.Println(entry.Name())
-
-    // Stop early if needed
-    if entry.Name() == "stop.txt" {
-        break
+    if entry.Name() == "target.txt" {
+        return process(entry)
     }
 }
 ```
 
-The iterator yields entries one at a time, enabling early termination without reading entire directories and providing natural error handling within the loop.
+## Implementations
 
-## Bulk Operations
+Maintained in this module:
 
-Directory operations use tar streams and match file operation semantics:
+- [osfs](https://pkg.go.dev/lesiw.io/fs/osfs) — the local filesystem,
+  backed by `os`, implementing most optional interfaces natively
+- [memfs](https://pkg.go.dev/lesiw.io/fs/memfs) — in-memory,
+  Playground-safe, useful in tests and examples
 
-```go
-// Read directory as tar (like reading a file)
-r, err := fs.Open(ctx, fsys, "project/")
-if err != nil {
-    log.Fatal(err)
-}
-defer r.Close()
-io.Copy(archiveWriter, r)
+Reference implementations demonstrating the abstraction across
+diverse backends, with Docker-based tests:
 
-// Add files to directory (like appending to a file)
-w, err := fs.Append(ctx, fsys, "project/")
-if err != nil {
-    log.Fatal(err)
-}
-defer w.Close()
-io.Copy(w, newFilesArchive)
+- [HTTP](../internal/example/http) — read-only HTTP filesystem
+- [S3](../internal/example/s3) — Amazon S3 via the MinIO SDK
+- [SFTP](../internal/example/sftp) — SSH File Transfer Protocol
+- [SMB](../internal/example/smb) — SMB/CIFS network shares
+- [SSH](../internal/example/ssh) — remote filesystem over SSH
+- [WebDAV](../internal/example/webdav) — WebDAV protocol
 
-// Empty directory (like truncating a file to zero)
-err = fs.Truncate(ctx, fsys, "project/", 0)
-
-// Replace directory contents (like creating/truncating a file)
-w, err = fs.Create(ctx, fsys, "restore/")
-if err != nil {
-    log.Fatal(err)
-}
-defer w.Close()
-io.Copy(w, archiveReader)
-```
-
-**Why?** Remote filesystems benefit from bulk operations—transferring many small files individually is slow. The trailing slash convention clearly indicates directory operations while matching the semantics users already understand from file operations.
-
-Optional interfaces enable native implementations:
-- `DirFS` - Read directories as tar (useful for read-only filesystems)
-- `AppendDirFS` - Write tar streams to directories
-- `TruncateDirFS` - Efficiently empty directories
-
-When not implemented, operations automatically fall back to walking the filesystem and using `archive/tar`.
-
-## Example Implementations
-
-Reference implementations demonstrating the abstraction across diverse backends:
-
-* [HTTP](../internal/example/http) - Read-only HTTP filesystem
-* [S3](../internal/example/s3) - Amazon S3 via MinIO SDK
-* [SFTP](../internal/example/sftp) - SSH File Transfer Protocol
-* [SMB](../internal/example/smb) - SMB/CIFS network shares
-* [SSH](../internal/example/ssh) - SSH with tar for bulk operations
-* [WebDAV](../internal/example/webdav) - WebDAV protocol
-
-These implementations require Docker to run tests.
+[lesiw.io/command](https://github.com/lesiw/command) builds on this
+package: its `command.FS` derives a filesystem for any machine it
+can run commands on, ssh hosts and containers included.
 
 ## Testing
 
-The `lesiw.io/fs/fstest` package provides a test suite for filesystem implementations:
+The [fstest](https://pkg.go.dev/lesiw.io/fs/fstest) package validates
+filesystem implementations.
 
 ```go
 func TestMyFS(t *testing.T) {
-    fsys := myfs.New(...)
-    t.Cleanup(func() { fsys.Close() })
+    fsys := myfs.New()
+    t.Cleanup(func() { _ = fs.Close(fsys) })
     fstest.TestFS(t.Context(), t, fsys)
 }
 ```
 
-The test suite automatically detects capabilities through type assertions and validates all supported operations.
+The suite detects capabilities through type assertions and exercises
+every operation the implementation supports, fallbacks included.
 
 ## Documentation
 
-Full documentation available at [pkg.go.dev/lesiw.io/fs](https://pkg.go.dev/lesiw.io/fs).
+- [pkg.go.dev/lesiw.io/fs](https://pkg.go.dev/lesiw.io/fs) — full API
+  documentation
+- [cmdbuf.io](https://cmdbuf.github.io) — automation built on this
+  package and lesiw.io/command, with worked examples
 
 ## License
 
-See LICENSE file in the repository root.
+[BSD 3-Clause](../LICENSE)
