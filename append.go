@@ -181,7 +181,6 @@ func extractTarToFS(
 			return fmt.Errorf("fs: insecure file path %q", hdr.Name)
 		}
 
-		// Construct full path
 		fullPath := path.Join(dir, hdr.Name)
 
 		switch hdr.Typeflag {
@@ -196,14 +195,12 @@ func extractTarToFS(
 				}
 			}
 		case tar.TypeReg:
-			// Create file with mode from tar header
 			fileCtx := WithFileMode(ctx, Mode(hdr.Mode))
 			f, err := Create(fileCtx, fsys, fullPath)
 			if err != nil {
 				return err
 			}
 
-			// Copy contents
 			_, copyErr := io.Copy(f, tr)
 			closeErr := f.Close()
 			if copyErr != nil {
