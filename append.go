@@ -196,15 +196,6 @@ func extractTarToFS(
 				}
 			}
 		case tar.TypeReg:
-			// Create parent directories only if MkdirFS is supported
-			// (otherwise directories are virtual and created implicitly)
-			if supportsMkdir {
-				parent := path.Dir(fullPath)
-				if err := MkdirAll(ctx, fsys, parent); err != nil {
-					return err
-				}
-			}
-
 			// Create file with mode from tar header
 			fileCtx := WithFileMode(ctx, Mode(hdr.Mode))
 			f, err := Create(fileCtx, fsys, fullPath)
