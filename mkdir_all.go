@@ -92,7 +92,7 @@ func mkdirAllFallback(ctx context.Context, fsys FS, name string) error {
 	// Most commonly this is because the parent doesn't exist,
 	// but we recurse regardless of the error type
 	parent := path.Dir(name)
-	if parent == "." || parent == name {
+	if parent == name {
 		return err
 	}
 

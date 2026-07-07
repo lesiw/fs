@@ -79,7 +79,7 @@ retry:
 			return nil, err
 		}
 		dir := path.Dir(name)
-		if dir == "." || dir == name {
+		if dir == name {
 			return nil, err
 		}
 		if merr := MkdirAll(ctx, fsys, dir); merr != nil {
