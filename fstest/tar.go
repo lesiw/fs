@@ -28,54 +28,30 @@ func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
 	})
 }
 
-// testOpenEmptyDir tests reading an empty directory as a tar stream.
-// This requires MkdirFS support to create the empty directory.
+// testOpenEmptyDir tests reading an empty directory as a tar stream:
+// the stream must contain no file entries, and at most one TypeDir
+// entry (a self-entry that native DirFS implementations may include).
 func testOpenEmptyDir(
 	ctx context.Context, t *testing.T, fsys fs.FS,
 ) {
-	if _, ok := fsys.(fs.StatFS); !ok {
-		t.Skip("StatFS not supported - cannot detect directories")
-	}
-
-	// Create test directory structure
-	testDir := "test_opendir"
-	if err := fs.MkdirAll(ctx, fsys, testDir+"/subdir"); err != nil {
+	testDir := "test_openemptydir"
+	err := fs.MkdirAll(ctx, fsys, testDir)
+	if err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
-			t.Skip("MkdirFS not supported (required for empty directory test)")
+			t.Skip("MkdirFS not supported")
 		}
-		t.Fatalf("MkdirAll(): %v", err)
+		t.Fatalf("MkdirAll(%q): %v", testDir, err)
 	}
 	cleanup(ctx, t, fsys, testDir)
 
-	file1Data := []byte("file one")
-	file1 := testDir + "/file1.txt"
-	if err := fs.WriteFile(ctx, fsys, file1, file1Data); err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Skip("write operations not supported")
-		}
-		t.Fatalf("WriteFile(%q): %v", file1, err)
-	}
-
-	file2Data := []byte("file two")
-	file2 := testDir + "/subdir/file2.txt"
-	if err := fs.WriteFile(ctx, fsys, file2, file2Data); err != nil {
-		if errors.Is(err, fs.ErrUnsupported) {
-			t.Skip("write operations not supported")
-		}
-		t.Fatalf("WriteFile(%q): %v", file2, err)
-	}
-
-	// Open directory as tar stream using trailing slash
 	tarReader, err := fs.Open(ctx, fsys, testDir+"/")
 	if err != nil {
 		t.Fatalf("Open(%q): %v", testDir+"/", err)
 	}
 	defer tarReader.Close()
 
-	// Read and verify tar contents
 	tr := tar.NewReader(tarReader)
-	foundFiles := make(map[string][]byte)
-
+	var dirEntries int
 	for {
 		hdr, tarErr := tr.Next()
 		if tarErr == io.EOF {
@@ -84,45 +60,18 @@ func testOpenEmptyDir(
 		if tarErr != nil {
 			t.Fatalf("tar.Next(): %v", tarErr)
 		}
-
-		// Read file contents
 		if !hdr.FileInfo().IsDir() {
-			data, readErr := io.ReadAll(tr)
-			if readErr != nil {
-				t.Fatalf("ReadAll(%q): %v", hdr.Name, readErr)
-			}
-			foundFiles[path.Clean(hdr.Name)] = data
-		}
-	}
-
-	// Verify expected files were found
-	expectedFiles := map[string][]byte{
-		"file1.txt":        file1Data,
-		"subdir/file2.txt": file2Data,
-	}
-
-	for name, expectedData := range expectedFiles {
-		var data []byte
-		var found bool
-		for foundPath, foundData := range foundFiles {
-			if pathsEqual([]string{foundPath}, []string{name}) {
-				data = foundData
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("tar archive missing file: %q", name)
+			t.Errorf("unexpected file entry in empty-dir tar: %q", hdr.Name)
 			continue
 		}
-		if !bytes.Equal(data, expectedData) {
-			t.Errorf(
-				"tar file %q content = %q, want %q",
-				name, data, expectedData,
-			)
-		}
+		dirEntries++
 	}
-
+	if dirEntries > 1 {
+		t.Errorf(
+			"empty-dir tar: got %d directory entries, want at most 1",
+			dirEntries,
+		)
+	}
 }
 
 // testOpenDir tests reading a directory created by files.
