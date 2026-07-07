@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"lesiw.io/fs/path"
@@ -174,6 +175,10 @@ func extractTarToFS(
 		}
 		if err != nil {
 			return err
+		}
+
+		if !path.IsLocal(hdr.Name) {
+			return fmt.Errorf("fs: insecure file path %q", hdr.Name)
 		}
 
 		// Construct full path

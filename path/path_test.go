@@ -270,6 +270,67 @@ func TestIsAbs(t *testing.T) {
 	}
 }
 
+func TestIsLocal(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"", false},
+		{".", true},
+
+		// Unix-style local
+		{"foo", true},
+		{"foo/bar", true},
+		{"./foo", true},
+		{"./foo/bar", true},
+		{"foo/./bar", true},
+		{"foo/../bar", true},
+		{"foo/..", true},
+
+		// Unix-style escapes
+		{"..", false},
+		{"../foo", false},
+		{"foo/../..", false},
+		{"foo/../../bar", false},
+		{"./..", false},
+
+		// Unix-style absolute
+		{"/", false},
+		{"/foo", false},
+		{"/foo/../bar", false},
+
+		// Windows-style local
+		{`foo\bar`, true},
+		{`.\foo`, true},
+		{`foo\.\bar`, true},
+		{`foo\..\bar`, true},
+
+		// Windows-style escapes
+		{`..\foo`, false},
+		{`foo\..\..\bar`, false},
+
+		// Windows-style absolute
+		{`C:\`, false},
+		{`C:\foo`, false},
+		{`c:\foo`, false},
+
+		// URL-style absolute
+		{"https://example.com", false},
+		{"https://example.com/foo", false},
+		{"s3://bucket/key", false},
+		{"file:///home/user", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			got := IsLocal(tt.path)
+			if got != tt.want {
+				t.Errorf("IsLocal(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestClean(t *testing.T) {
 	tests := []struct {
 		name string

@@ -22,6 +22,7 @@ package path
 import (
 	"fmt"
 	stdpath "path"
+	"slices"
 	"strings"
 )
 
@@ -207,6 +208,20 @@ func IsAbs(path string) bool {
 	}
 
 	return false
+}
+
+// IsLocal reports whether path is a local path: a relative path that
+// resolves within the current directory. Absolute paths (in any style),
+// the empty string, and paths whose lexical resolution begins with a
+// parent-directory (..) segment are not local.
+//
+// The path style is auto-detected as in [Clean] and [IsAbs]. A local
+// path can safely be joined to a base directory without escaping it.
+func IsLocal(path string) bool {
+	if path == "" || IsAbs(path) {
+		return false
+	}
+	return !slices.Contains(segments(path), "..")
 }
 
 // Clean returns the canonical path name equivalent to path by purely lexical

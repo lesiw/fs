@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"lesiw.io/fs"
@@ -21,6 +22,9 @@ func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
 	})
 	t.Run("CreateDir", func(t *testing.T) {
 		testCreateDir(ctx, t, fsys)
+	})
+	t.Run("CreateDirRejectsTraversal", func(t *testing.T) {
+		testCreateDirRejectsTraversal(ctx, t, fsys)
 	})
 }
 
@@ -205,6 +209,60 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 		}
 	}
 
+}
+
+// testCreateDirRejectsTraversal tests that extraction rejects tar entries
+// whose names would escape the target directory.
+func testCreateDirRejectsTraversal(
+	ctx context.Context, t *testing.T, fsys fs.FS,
+) {
+	if _, ok := fsys.(fs.CreateFS); !ok {
+		t.Skip("CreateFS not supported")
+	}
+
+	names := []string{
+		"../foo",
+		"/foo",
+		"a/b/../../../c",
+		`..\foo`,
+	}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			var buf bytes.Buffer
+			tw := tar.NewWriter(&buf)
+			err := tw.WriteHeader(&tar.Header{
+				Name:     name,
+				Typeflag: tar.TypeReg,
+			})
+			if err != nil {
+				t.Fatalf("WriteHeader(%q): %v", name, err)
+			}
+			err = tw.Close()
+			if err != nil {
+				t.Fatalf("Close() tar writer: %v", err)
+			}
+
+			testDir := "test_traversal"
+			w, err := fs.Create(ctx, fsys, testDir+"/")
+			if err != nil {
+				t.Fatalf("Create(%q): %v", testDir+"/", err)
+			}
+			cleanup(ctx, t, fsys, testDir)
+
+			_, copyErr := io.Copy(w, &buf)
+			closeErr := w.Close()
+			err = errors.Join(copyErr, closeErr)
+			if err == nil ||
+				!strings.Contains(err.Error(), "insecure file path") {
+				t.Fatalf(
+					"extraction of entry %q: got err %v, "+
+						"want error containing %q",
+					name, err, "insecure file path",
+				)
+			}
+		})
+	}
 }
 
 // testCreateDir tests writing tar streams to create directories.
