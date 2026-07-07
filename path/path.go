@@ -108,9 +108,7 @@ func Split(path string) (dir, file string) {
 	// For URL-style paths, skip the :// when finding the last separator
 	searchStart := 0
 	if style.kind == styleURL {
-		if protoEnd := strings.Index(path, "://"); protoEnd >= 0 {
-			searchStart = protoEnd + 3
-		}
+		searchStart = strings.Index(path, "://") + 3
 	}
 
 	// Find last separator (after searchStart for URLs)
@@ -260,23 +258,17 @@ func Clean(path string) string {
 
 	if style.kind == styleURL {
 		// For URLs, extract protocol://host/ as a single "root" part
-		protoEnd := strings.Index(path, "://")
-		if protoEnd >= 0 {
-			// Find the first / after ://
-			hostStart := protoEnd + 3
-			hostEnd := strings.Index(path[hostStart:], "/")
-			if hostEnd < 0 {
-				// No path after host — normalize to include trailing /
-				prefix = path + "/"
-			} else {
-				prefix = path[:hostStart+hostEnd+1] // Include the /
-				rest := path[hostStart+hostEnd+1:]
-				if rest != "" {
-					parts = strings.Split(rest, sep)
-				}
-			}
+		hostStart := strings.Index(path, "://") + 3
+		hostEnd := strings.Index(path[hostStart:], "/")
+		if hostEnd < 0 {
+			// No path after host — normalize to include trailing /
+			prefix = path + "/"
 		} else {
-			parts = strings.Split(path, sep)
+			prefix = path[:hostStart+hostEnd+1] // Include the /
+			rest := path[hostStart+hostEnd+1:]
+			if rest != "" {
+				parts = strings.Split(rest, sep)
+			}
 		}
 	} else if style.kind == styleWindows {
 		// For Windows, preserve drive letter (only at start
@@ -471,11 +463,7 @@ func segments(p string) []string {
 func volume(p string, style pathStyle) string {
 	switch style.kind {
 	case styleURL:
-		protoEnd := strings.Index(p, "://")
-		if protoEnd < 0 {
-			return ""
-		}
-		hostStart := protoEnd + 3
+		hostStart := strings.Index(p, "://") + 3
 		slashIdx := strings.Index(p[hostStart:], "/")
 		if slashIdx < 0 {
 			return p
