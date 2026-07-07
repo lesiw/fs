@@ -363,7 +363,7 @@ func Clean(path string) string {
 	// external context.
 	if localPrefix != "" {
 		result = localPrefix + result
-	} else if prefix == "" && result != "." {
+	} else if prefix == "" {
 		result = "." + sep + result
 	}
 
