@@ -197,8 +197,9 @@ func IsAbs(path string) bool {
 	}
 
 	// Windows-style: starts with [letter]:\
-	if len(path) >= 3 && isDriveLetter(path[0]) && path[1] == ':' &&
-		(path[2] == '\\' || path[2] == '/') {
+	windows := len(path) >= 3 && isDriveLetter(path[0]) &&
+		path[1] == ':' && (path[2] == '\\' || path[2] == '/')
+	if windows {
 		return true
 	}
 
@@ -236,7 +237,7 @@ func IsLocal(path string) bool {
 //
 // If .. would escape a root, Clean stops at the root (e.g., "/.." becomes "/",
 // "C:\.." becomes "C:\").
-func Clean(path string) string {
+func Clean(path string) (result string) {
 	if path == "" {
 		return "."
 	}
@@ -277,8 +278,9 @@ func Clean(path string) string {
 	} else if style.kind == styleWindows {
 		// For Windows, preserve drive letter (only at start
 		// of path, not after .\ prefix).
-		if localPrefix == "" && len(path) >= 2 &&
-			path[1] == ':' && isDriveLetter(path[0]) {
+		drive := localPrefix == "" && len(path) >= 2 &&
+			path[1] == ':' && isDriveLetter(path[0])
+		if drive {
 			if len(path) >= 3 && path[2:3] == sep {
 				prefix = path[:3] // C:\
 				rest := path[3:]
@@ -339,7 +341,6 @@ func Clean(path string) string {
 	}
 
 	// Build result
-	var result string
 	if prefix != "" {
 		if len(out) == 0 {
 			result = prefix
@@ -408,8 +409,10 @@ func Rel(basepath, targpath string) (string, error) {
 
 	// Find the longest common prefix.
 	var common int
-	for common < min(len(baseSeg), len(targSeg)) &&
-		baseSeg[common] == targSeg[common] {
+	for common < min(len(baseSeg), len(targSeg)) {
+		if baseSeg[common] != targSeg[common] {
+			break
+		}
 		common++
 	}
 
@@ -621,9 +624,9 @@ func joinParts(parts []string, style pathStyle) string {
 
 	case styleWindows:
 		// For Windows, first part might be C: or C:\
-		if len(parts) > 0 && len(parts[0]) >= 2 &&
-			parts[0][1] == ':' &&
-			isDriveLetter(parts[0][0]) {
+		drive := len(parts) > 0 && len(parts[0]) >= 2 &&
+			parts[0][1] == ':' && isDriveLetter(parts[0][0])
+		if drive {
 			first := parts[0]
 			if len(parts) == 1 {
 				// Single drive letter - ensure it has backslash

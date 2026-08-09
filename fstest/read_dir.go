@@ -82,12 +82,12 @@ func testReadDirCurrent(ctx context.Context, t *testing.T, fsys fs.FS, files []F
 		}
 	}
 
-	found := make(map[string]bool)
+	found := make(map[string]struct{})
 	for _, name := range names {
-		found[name] = true
+		found[name] = struct{}{}
 	}
 	for name := range want {
-		if !found[name] {
+		if _, ok := found[name]; !ok {
 			t.Errorf("ReadDir(\".\") missing %q", name)
 		}
 	}

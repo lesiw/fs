@@ -53,8 +53,8 @@ func Symlink(ctx context.Context, fsys FS, oldname, newname string) (err error) 
 //
 // Requires: [ReadLinkFS]
 func ReadLink(ctx context.Context, fsys FS, name string) (string, error) {
-	var err error
-	if name, err = localizePath(ctx, fsys, name); err != nil {
+	name, err := localizePath(ctx, fsys, name)
+	if err != nil {
 		return "", err
 	}
 	if rfs, ok := fsys.(ReadLinkFS); ok {
@@ -74,8 +74,8 @@ func ReadLink(ctx context.Context, fsys FS, name string) (string, error) {
 //
 // Requires: [ReadLinkFS] || [StatFS]
 func Lstat(ctx context.Context, fsys FS, name string) (FileInfo, error) {
-	var err error
-	if name, err = localizePath(ctx, fsys, name); err != nil {
+	name, err := localizePath(ctx, fsys, name)
+	if err != nil {
 		return nil, err
 	}
 	if rfs, ok := fsys.(ReadLinkFS); ok {

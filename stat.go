@@ -19,8 +19,8 @@ type StatFS interface {
 //
 // Requires: [StatFS]
 func Stat(ctx context.Context, fsys FS, name string) (FileInfo, error) {
-	var err error
-	if name, err = localizePath(ctx, fsys, name); err != nil {
+	name, err := localizePath(ctx, fsys, name)
+	if err != nil {
 		return nil, err
 	}
 	if sfs, ok := fsys.(StatFS); ok {

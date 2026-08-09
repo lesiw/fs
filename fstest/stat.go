@@ -95,12 +95,7 @@ func testStatNonexistent(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testStatWant(files []File) (*File, string) {
-	var (
-		file *File
-		dir  string
-	)
-
+func testStatWant(files []File) (file *File, dir string) {
 	for i := range files {
 		if file == nil {
 			file = &files[i]

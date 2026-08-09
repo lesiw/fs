@@ -184,11 +184,12 @@ func walkBreadthFirst(ctx context.Context, fsys FS, root string, depth int) iter
 			for entry, err := range ReadDir(ctx, fsys, current.path) {
 				if err != nil {
 					// Yield error for this directory and continue
-					if !yield(nil, &PathError{
+					perr := &PathError{
 						Op:   "readdir",
 						Path: current.path,
 						Err:  err,
-					}) {
+					}
+					if !yield(nil, perr) {
 						return
 					}
 					break
@@ -209,11 +210,12 @@ func walkBreadthFirst(ctx context.Context, fsys FS, root string, depth int) iter
 				// Get FileInfo for the entry
 				info, err := entry.Info()
 				if err != nil {
-					if !yield(nil, &PathError{
+					perr := &PathError{
 						Op:   "stat",
 						Path: entryPath,
 						Err:  err,
-					}) {
+					}
+					if !yield(nil, perr) {
 						return
 					}
 					continue

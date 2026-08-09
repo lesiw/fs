@@ -199,8 +199,9 @@ func testCreateDirRejectsTraversal(ctx context.Context, t *testing.T, fsys fs.FS
 			_, copyErr := io.Copy(w, &buf)
 			closeErr := w.Close()
 			err = errors.Join(copyErr, closeErr)
-			if err == nil ||
-				!strings.Contains(err.Error(), "insecure file path") {
+			miss := err == nil ||
+				!strings.Contains(err.Error(), "insecure file path")
+			if miss {
 				t.Fatalf(
 					"extraction of entry %q: got err %v, "+
 						"want error containing %q",

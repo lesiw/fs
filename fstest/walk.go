@@ -37,23 +37,23 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	}
 }
 
-func testWalkWant(files []File) []string {
-	var (
-		want []string
-		seen = make(map[string]bool)
-	)
+func testWalkWant(files []File) (want []string) {
+	seen := make(map[string]struct{})
 
 	for _, f := range files {
 		want = append(want, f.Path)
 
 		p := f.Path
 		for {
-			dir := path.Dir(p)
-			if dir == "." || dir == "" || path.IsRoot(dir) || seen[dir] {
+			var (
+				dir   = path.Dir(p)
+				_, ok = seen[dir]
+			)
+			if dir == "." || dir == "" || path.IsRoot(dir) || ok {
 				break
 			}
 			want = append(want, dir)
-			seen[dir] = true
+			seen[dir] = struct{}{}
 			p = dir
 		}
 	}

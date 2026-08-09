@@ -69,11 +69,8 @@ func testGlobNoMatch(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testGlobWant(files []File, pattern string) []string {
-	var (
-		want          []string
-		patternHasDir = path.Dir(pattern) != "."
-	)
+func testGlobWant(files []File, pattern string) (want []string) {
+	patternHasDir := path.Dir(pattern) != "."
 
 	for _, f := range files {
 		matched, err := path.Match(pattern, f.Path)

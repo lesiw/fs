@@ -4,7 +4,7 @@ package memfs
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	errIsDir       = errors.New("is a directory")
-	errDirNotEmpty = errors.New("directory not empty")
+	errIsDir       = fmt.Errorf("is a directory")
+	errDirNotEmpty = fmt.Errorf("directory not empty")
 )
 
 // New returns a new empty in-memory filesystem.

@@ -62,8 +62,8 @@ type DirFS interface {
 //
 // Requires: [DirFS] || ([FS] && ([ReadDirFS] || [WalkFS]))
 func Open(ctx context.Context, fsys FS, name string) (ReadPathCloser, error) {
-	var err error
-	if name, err = localizePath(ctx, fsys, name); err != nil {
+	name, err := localizePath(ctx, fsys, name)
+	if err != nil {
 		return nil, err
 	}
 

@@ -70,8 +70,8 @@ type AppendDirFS interface {
 //
 // Requires: [AppendDirFS] || [CreateFS]
 func Append(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
-	var err error
-	if name, err = localizePath(ctx, fsys, name); err != nil {
+	name, err := localizePath(ctx, fsys, name)
+	if err != nil {
 		return nil, err
 	}
 

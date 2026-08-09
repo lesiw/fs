@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"lesiw.io/fs/path"
@@ -155,7 +156,7 @@ func truncateDirAsTar(ctx context.Context, fsys FS, dir string, size int64) erro
 		return &PathError{
 			Op:   "truncate",
 			Path: dir,
-			Err:  errors.New("directory truncate requires size 0"),
+			Err:  fmt.Errorf("directory truncate requires size 0"),
 		}
 	}
 
@@ -181,7 +182,7 @@ func recreateTruncateDir(ctx context.Context, fsys FS, dir string) error {
 			return &PathError{
 				Op:   "truncate",
 				Path: dir,
-				Err:  errors.New("not a directory"),
+				Err:  fmt.Errorf("not a directory"),
 			}
 		}
 	}

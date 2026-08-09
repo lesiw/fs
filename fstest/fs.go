@@ -21,10 +21,8 @@ type File struct {
 // TestFSOption configures TestFS behavior via functional options.
 type TestFSOption func(*testFSOpts)
 
-// testFSOpts holds configuration for TestFS.
-type testFSOpts struct {
-	expectedFiles []File
-}
+// testFSOpts holds the files TestFS expects to exist.
+type testFSOpts []File
 
 // WithFiles specifies files that must exist in the filesystem.
 // When provided, TestFS validates these files exist on read-only filesystems.
@@ -41,9 +39,7 @@ type testFSOpts struct {
 //	        fstest.File{Path: "data/subdir"},
 //	    ))
 func WithFiles(files ...File) TestFSOption {
-	return func(opts *testFSOpts) {
-		opts.expectedFiles = files
-	}
+	return func(opts *testFSOpts) { *opts = files }
 }
 
 // TestFS runs a comprehensive compliance test suite on a filesystem
@@ -82,7 +78,7 @@ func TestFS(ctx context.Context, t *testing.T, fsys fs.FS, opts ...TestFSOption)
 	}
 
 	// Use provided files or default comprehensive structure
-	files := o.expectedFiles
+	files := []File(o)
 	if files == nil {
 		files = defaultTestFiles()
 		// Only write files if expectedFiles was not provided

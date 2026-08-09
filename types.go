@@ -266,6 +266,7 @@ package fs
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 )
 
@@ -341,7 +342,7 @@ var (
 	ErrNotExist    = fs.ErrNotExist
 	ErrClosed      = fs.ErrClosed
 	ErrUnsupported = errors.ErrUnsupported
-	ErrNotDir      = errors.New("not a directory")
+	ErrNotDir      = fmt.Errorf("not a directory")
 )
 
 // Valid values for [Mode].
