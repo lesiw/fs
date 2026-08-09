@@ -34,9 +34,7 @@ type WalkFS interface {
 	//               (like find -maxdepth n)
 	//
 	// Entries returned by Walk have Path() populated with full paths.
-	Walk(
-		ctx context.Context, root string, depth int,
-	) iter.Seq2[DirEntry, error]
+	Walk(ctx context.Context, root string, depth int) iter.Seq2[DirEntry, error]
 }
 
 // ReadDir reads the named directory and returns an iterator over its
@@ -44,9 +42,7 @@ type WalkFS interface {
 // directory.
 //
 // Requires: [ReadDirFS] || [WalkFS]
-func ReadDir(
-	ctx context.Context, fsys FS, name string,
-) iter.Seq2[DirEntry, error] {
+func ReadDir(ctx context.Context, fsys FS, name string) iter.Seq2[DirEntry, error] {
 	var err error
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return func(yield func(DirEntry, error) bool) {
@@ -112,9 +108,7 @@ func ReadDir(
 // (skip that directory) or break to stop the walk.
 //
 // Requires: [WalkFS] || [ReadDirFS]
-func Walk(
-	ctx context.Context, fsys FS, root string, depth int,
-) iter.Seq2[DirEntry, error] {
+func Walk(ctx context.Context, fsys FS, root string, depth int) iter.Seq2[DirEntry, error] {
 	var err error
 	if root, err = localizePath(ctx, fsys, root); err != nil {
 		return func(yield func(DirEntry, error) bool) {
@@ -176,9 +170,7 @@ type queueItem struct {
 }
 
 // walkBreadthFirst implements breadth-first traversal using ReadDirFS.
-func walkBreadthFirst(
-	ctx context.Context, fsys FS, root string, depth int,
-) iter.Seq2[DirEntry, error] {
+func walkBreadthFirst(ctx context.Context, fsys FS, root string, depth int) iter.Seq2[DirEntry, error] {
 	return func(yield func(DirEntry, error) bool) {
 		// Start with root directory
 		queue := []queueItem{{root, 0}}

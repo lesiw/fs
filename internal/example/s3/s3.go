@@ -36,9 +36,7 @@ type s3FS struct {
 // accessKey: S3 access key
 // secretKey: S3 secret key
 // useSSL: whether to use HTTPS
-func New(
-	endpoint, bucket, accessKey, secretKey string, useSSL bool,
-) (fs.FS, error) {
+func New(endpoint, bucket, accessKey, secretKey string, useSSL bool) (fs.FS, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -86,9 +84,7 @@ func (f *s3FS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 
 var _ fs.CreateFS = (*s3FS)(nil)
 
-func (f *s3FS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *s3FS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	name = f.resolveName(name)
 	return &s3WriteCloser{
 		ctx:        ctx,
@@ -101,9 +97,7 @@ func (f *s3FS) Create(
 
 var _ fs.AppendFS = (*s3FS)(nil)
 
-func (f *s3FS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *s3FS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	name = f.resolveName(name)
 	wc := &s3WriteCloser{
 		ctx:        ctx,
@@ -248,9 +242,7 @@ func (f *s3FS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 
 var _ fs.ReadDirFS = (*s3FS)(nil)
 
-func (f *s3FS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *s3FS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	name = f.resolveName(name)
 	return func(yield func(fs.DirEntry, error) bool) {
 		// Check if this is a file (not a directory)
@@ -360,9 +352,7 @@ func (f *s3FS) Localize(ctx context.Context, name string) (string, error) {
 
 var _ fs.AbsFS = (*s3FS)(nil)
 
-func (f *s3FS) Abs(
-	ctx context.Context, name string,
-) (string, error) {
+func (f *s3FS) Abs(ctx context.Context, name string) (string, error) {
 	if path.IsAbs(name) {
 		return path.Clean(name), nil
 	}

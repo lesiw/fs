@@ -10,9 +10,7 @@ import (
 
 var _ fs.CreateFS = (*memFS)(nil)
 
-func (f *memFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *memFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	name = resolvePath(ctx, name)
 	f.Lock()
 	defer f.Unlock()

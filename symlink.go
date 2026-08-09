@@ -29,9 +29,7 @@ type ReadLinkFS interface {
 // Analogous to: [os.Symlink], ln -s, 9P2000.u Tsymlink.
 //
 // Requires: [SymlinkFS]
-func Symlink(
-	ctx context.Context, fsys FS, oldname, newname string,
-) error {
+func Symlink(ctx context.Context, fsys FS, oldname, newname string) error {
 	var err error
 	if oldname, err = localizePath(ctx, fsys, oldname); err != nil {
 		return err

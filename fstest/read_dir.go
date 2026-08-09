@@ -10,9 +10,7 @@ import (
 )
 
 func testReadDir(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	t.Run("ReadDirDot", func(t *testing.T) {
-		testReadDirDot(ctx, t, fsys)
-	})
+	t.Run("ReadDirDot", func(t *testing.T) { testReadDirDot(ctx, t, fsys) })
 	t.Run("ReadDirCurrent", func(t *testing.T) {
 		testReadDirCurrent(ctx, t, fsys, files)
 	})
@@ -37,9 +35,7 @@ func testReadDirDot(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testReadDirCurrent(
-	ctx context.Context, t *testing.T, fsys fs.FS, files []File,
-) {
+func testReadDirCurrent(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	want := testReadDirWant(files)
 
 	var names []string
@@ -142,9 +138,7 @@ func testReadDirFile(files []File) *File {
 	return nil
 }
 
-func testReadDirOnFile(
-	ctx context.Context, t *testing.T, fsys fs.FS, testFile *File,
-) {
+func testReadDirOnFile(ctx context.Context, t *testing.T, fsys fs.FS, testFile *File) {
 
 	// Attempt to ReadDir on the file
 	var gotErr error

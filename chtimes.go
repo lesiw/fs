@@ -20,9 +20,7 @@ type ChtimesFS interface {
 // Analogous to: [os.Chtimes], touch -t, 9P Twstat.
 //
 // Requires: [ChtimesFS]
-func Chtimes(
-	ctx context.Context, fsys FS, name string, atime, mtime time.Time,
-) error {
+func Chtimes(ctx context.Context, fsys FS, name string, atime, mtime time.Time) error {
 	var err error
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err

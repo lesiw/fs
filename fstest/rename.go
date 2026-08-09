@@ -9,12 +9,8 @@ import (
 )
 
 func testRename(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Run("RenameFile", func(t *testing.T) {
-		testRenameFile(ctx, t, fsys)
-	})
-	t.Run("RenameDir", func(t *testing.T) {
-		testRenameDir(ctx, t, fsys)
-	})
+	t.Run("RenameFile", func(t *testing.T) { testRenameFile(ctx, t, fsys) })
+	t.Run("RenameDir", func(t *testing.T) { testRenameDir(ctx, t, fsys) })
 }
 
 func testRenameFile(ctx context.Context, t *testing.T, fsys fs.FS) {

@@ -85,9 +85,7 @@ func Temp(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 
 // tempFile creates a temporary file, trying TempFS, then TempDirFS,
 // then CreateFS fallback.
-func tempFile(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func tempFile(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	// Try TempFS first
 	if tfs, ok := fsys.(TempFS); ok {
 		tempPath, err := tfs.Temp(ctx, name)
@@ -119,9 +117,7 @@ func tempFile(
 }
 
 // tempDir creates a temporary directory, trying TempDirFS then MkdirFS.
-func tempDir(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func tempDir(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	// Try TempDirFS first
 	if tfs, ok := fsys.(TempDirFS); ok {
 		dirPath, err := tfs.TempDir(ctx, name)
@@ -141,9 +137,7 @@ func tempDir(
 
 // tempFileInDir creates a file inside a temporary directory.
 // Returns the file writer directly - caller is responsible for cleanup.
-func tempFileInDir(
-	ctx context.Context, fsys FS, dirPath, name string,
-) (WritePathCloser, error) {
+func tempFileInDir(ctx context.Context, fsys FS, dirPath, name string) (WritePathCloser, error) {
 	// Check if CreateFS is supported
 	if _, ok := fsys.(CreateFS); !ok {
 		return nil, &PathError{
@@ -164,9 +158,7 @@ func tempFileInDir(
 }
 
 // tempFileFallback creates a temporary file using Create.
-func tempFileFallback(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func tempFileFallback(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	// Check if CreateFS is supported
 	if _, ok := fsys.(CreateFS); !ok {
 		return nil, &PathError{
@@ -187,9 +179,7 @@ func tempFileFallback(
 }
 
 // tempDirFallback creates a temporary directory using Mkdir.
-func tempDirFallback(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func tempDirFallback(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	// Check if MkdirFS is supported
 	if _, ok := fsys.(MkdirFS); !ok {
 		return nil, &PathError{

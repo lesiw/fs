@@ -102,9 +102,7 @@ func (f *smbFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS.
-func (f *smbFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *smbFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "create",
@@ -126,9 +124,7 @@ func (f *smbFS) Create(
 }
 
 // Append implements fs.AppendFS.
-func (f *smbFS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *smbFS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "append",
@@ -168,9 +164,7 @@ func (f *smbFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *smbFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *smbFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
 		if name == "" {
 			name = "."
@@ -207,9 +201,7 @@ func (f *smbFS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *smbFS) Mkdir(
-	ctx context.Context, name string,
-) error {
+func (f *smbFS) Mkdir(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "mkdir",
@@ -287,9 +279,7 @@ func (f *smbFS) RemoveAll(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *smbFS) Rename(
-	ctx context.Context, oldname, newname string,
-) error {
+func (f *smbFS) Rename(ctx context.Context, oldname, newname string) error {
 	if oldname == "" || newname == "" {
 		return &fs.PathError{
 			Op:   "rename",
@@ -357,6 +347,7 @@ type dirEntry struct {
 
 func (de *dirEntry) Name() string { return de.info.Name() }
 func (de *dirEntry) IsDir() bool  { return de.info.IsDir() }
+
 func (de *dirEntry) Type() fs.Mode {
 	return fs.Mode(de.info.Mode().Type())
 }

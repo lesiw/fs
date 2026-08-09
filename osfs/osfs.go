@@ -136,9 +136,7 @@ func (f *osFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 
 var _ fs.CreateFS = (*osFS)(nil)
 
-func (f *osFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *osFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
@@ -149,9 +147,7 @@ func (f *osFS) Create(
 
 var _ fs.AppendFS = (*osFS)(nil)
 
-func (f *osFS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *osFS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return nil, err
@@ -172,9 +168,7 @@ func (f *osFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 
 var _ fs.ReadDirFS = (*osFS)(nil)
 
-func (f *osFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *osFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
 		path, err := f.resolvePath(ctx, name)
 		if err != nil {
@@ -277,9 +271,7 @@ func (f *osFS) Truncate(ctx context.Context, name string, size int64) error {
 
 var _ fs.ChtimesFS = (*osFS)(nil)
 
-func (f *osFS) Chtimes(
-	ctx context.Context, name string, atime, mtime time.Time,
-) error {
+func (f *osFS) Chtimes(ctx context.Context, name string, atime, mtime time.Time) error {
 	path, err := f.resolvePath(ctx, name)
 	if err != nil {
 		return err

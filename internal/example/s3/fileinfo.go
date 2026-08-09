@@ -32,6 +32,7 @@ type s3DirEntry struct {
 
 func (de *s3DirEntry) Name() string { return de.name }
 func (de *s3DirEntry) IsDir() bool  { return de.isDir }
+
 func (de *s3DirEntry) Type() fs.Mode {
 	if de.isDir {
 		return fs.ModeDir

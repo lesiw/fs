@@ -73,9 +73,7 @@ func (br *bufferReader) Close() error {
 // Example:
 //
 //	io.Copy(fs.CreateBuffer(ctx, fsys, "output.txt"), src)
-func CreateBuffer(
-	ctx context.Context, fsys FS, name string,
-) io.WriteCloser {
+func CreateBuffer(ctx context.Context, fsys FS, name string) io.WriteCloser {
 	return &bufferWriter{ctx: ctx, fsys: fsys, name: name, create: true}
 }
 
@@ -87,9 +85,7 @@ func CreateBuffer(
 // Example:
 //
 //	io.Copy(fs.AppendBuffer(ctx, fsys, "log.txt"), src)
-func AppendBuffer(
-	ctx context.Context, fsys FS, name string,
-) io.WriteCloser {
+func AppendBuffer(ctx context.Context, fsys FS, name string) io.WriteCloser {
 	return &bufferWriter{ctx: ctx, fsys: fsys, name: name, create: false}
 }
 

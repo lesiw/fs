@@ -47,9 +47,7 @@ type CreateFS interface {
 // equivalent to Truncate(name, 0) followed by Append(name).
 //
 // Requires: See [Truncate] and [Append] requirements
-func Create(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func Create(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	var err error
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return nil, err
@@ -90,9 +88,7 @@ retry:
 	return writePathCloser(f, name), nil
 }
 
-func createDirAsTar(
-	ctx context.Context, fsys FS, dir string,
-) (io.WriteCloser, error) {
+func createDirAsTar(ctx context.Context, fsys FS, dir string) (io.WriteCloser, error) {
 	dir = path.Dir(dir)
 	if _, ok := fsys.(MkdirFS); ok {
 		if err := MkdirAll(ctx, fsys, dir); err != nil {

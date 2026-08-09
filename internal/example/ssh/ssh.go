@@ -104,9 +104,7 @@ func (f *sshFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 }
 
 // Create implements fs.CreateFS.
-func (f *sshFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *sshFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "create",
@@ -131,9 +129,7 @@ func (f *sshFS) Create(
 }
 
 // Append implements fs.AppendFS.
-func (f *sshFS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *sshFS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "append",
@@ -158,9 +154,7 @@ func (f *sshFS) Append(
 }
 
 // Stat implements fs.StatFS.
-func (f *sshFS) Stat(
-	ctx context.Context, name string,
-) (fs.FileInfo, error) {
+func (f *sshFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "stat",
@@ -178,9 +172,7 @@ func (f *sshFS) Stat(
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *sshFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *sshFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
 		if name == "" {
 			name = "."
@@ -212,9 +204,7 @@ func (f *sshFS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *sshFS) Mkdir(
-	ctx context.Context, name string,
-) error {
+func (f *sshFS) Mkdir(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "mkdir",
@@ -255,9 +245,7 @@ func (f *sshFS) Remove(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *sshFS) Rename(
-	ctx context.Context, oldname, newname string,
-) error {
+func (f *sshFS) Rename(ctx context.Context, oldname, newname string) error {
 	if oldname == "" || newname == "" {
 		return &fs.PathError{
 			Op:   "rename",
@@ -275,9 +263,7 @@ func (f *sshFS) Rename(
 }
 
 // Chmod implements fs.ChmodFS.
-func (f *sshFS) Chmod(
-	ctx context.Context, name string, mode fs.Mode,
-) error {
+func (f *sshFS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chmod",
@@ -313,9 +299,7 @@ func (f *sshFS) Chown(ctx context.Context, name string, uid, gid int) error {
 }
 
 // Chtimes implements fs.ChtimesFS.
-func (f *sshFS) Chtimes(
-	ctx context.Context, name string, atime, mtime time.Time,
-) error {
+func (f *sshFS) Chtimes(ctx context.Context, name string, atime, mtime time.Time) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chtimes",
@@ -333,9 +317,7 @@ func (f *sshFS) Chtimes(
 }
 
 // Symlink implements fs.SymlinkFS.
-func (f *sshFS) Symlink(
-	ctx context.Context, oldname, newname string,
-) error {
+func (f *sshFS) Symlink(ctx context.Context, oldname, newname string) error {
 	if oldname == "" || newname == "" {
 		return &fs.PathError{
 			Op:   "symlink",
@@ -422,6 +404,7 @@ type sshDirEntry struct {
 
 func (de *sshDirEntry) Name() string { return de.info.Name() }
 func (de *sshDirEntry) IsDir() bool  { return de.info.IsDir() }
+
 func (de *sshDirEntry) Type() fs.Mode {
 	return fs.Mode(de.info.Mode().Type())
 }

@@ -28,9 +28,7 @@ func testStress(ctx context.Context, t *testing.T, fsys fs.FS) {
 // TestMixedOperations performs a stress test that combines multiple filesystem
 // operations in realistic patterns. This tests that implementations correctly
 // handle complex workflows.
-func testMixedOperations(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testMixedOperations(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Create a directory structure with files at various levels
 	baseDir := "stress_test"
 	mkdirErr := fs.MkdirAll(ctx, fsys, baseDir+"/a/b/c")
@@ -111,10 +109,7 @@ func testMixedOperations(
 	} else {
 		// Verify old path is gone
 		if _, err := fs.Stat(ctx, fsys, oldPath); err == nil {
-			t.Errorf(
-				"Stat(%q) after rename succeeded, want error",
-				oldPath,
-			)
+			t.Errorf("Stat(%q) after rename succeeded, want error", oldPath)
 		}
 		// Verify new path exists
 		data, err := fs.ReadFile(ctx, fsys, newPath)
@@ -155,9 +150,7 @@ func testMixedOperations(
 // TestConcurrentReads tests that multiple concurrent read operations work
 // correctly. This is a basic concurrency test that doesn't use goroutines
 // but does test that file handles don't interfere with each other.
-func testConcurrentReads(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testConcurrentReads(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Create test files
 	const numFiles = 5
 	testDir := "concurrent_reads"
@@ -230,9 +223,7 @@ func testConcurrentReads(
 
 // TestModifyAndRead tests a realistic workflow of creating, modifying, and
 // reading files in various ways.
-func testModifyAndRead(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testModifyAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 	testDir := "modify_test"
 	mkdirErr := fs.Mkdir(ctx, fsys, testDir)
 	if errors.Is(mkdirErr, fs.ErrUnsupported) {
@@ -260,10 +251,7 @@ func testModifyAndRead(
 		t.Fatalf("ReadFile(%q) after initial write: %v", filePath, err)
 	}
 	if !bytes.Equal(data, initial) {
-		t.Errorf(
-			"initial ReadFile(%q) = %q, want %q",
-			filePath, data, initial,
-		)
+		t.Errorf("initial ReadFile(%q) = %q, want %q", filePath, data, initial)
 	}
 
 	// Overwrite with shorter content
@@ -318,9 +306,6 @@ func testModifyAndRead(
 
 	expected := append(shorter, appended...)
 	if !bytes.Equal(data, expected) {
-		t.Errorf(
-			"append ReadFile(%q) = %q, want %q",
-			filePath, data, expected,
-		)
+		t.Errorf("append ReadFile(%q) = %q, want %q", filePath, data, expected)
 	}
 }

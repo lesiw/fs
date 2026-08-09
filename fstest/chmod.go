@@ -9,12 +9,8 @@ import (
 )
 
 func testChmod(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Run("ChmodFile", func(t *testing.T) {
-		testChmodFile(ctx, t, fsys)
-	})
-	t.Run("ChmodDir", func(t *testing.T) {
-		testChmodDir(ctx, t, fsys)
-	})
+	t.Run("ChmodFile", func(t *testing.T) { testChmodFile(ctx, t, fsys) })
+	t.Run("ChmodDir", func(t *testing.T) { testChmodDir(ctx, t, fsys) })
 }
 
 func testChmodFile(ctx context.Context, t *testing.T, fsys fs.FS) {

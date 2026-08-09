@@ -72,9 +72,7 @@ func WithFiles(files ...File) TestFSOption {
 //	            fstest.File{Path: "file1.txt", Data: []byte("content")},
 //	        ))
 //	}
-func TestFS(
-	ctx context.Context, t *testing.T, fsys fs.FS, opts ...TestFSOption,
-) {
+func TestFS(ctx context.Context, t *testing.T, fsys fs.FS, opts ...TestFSOption) {
 	t.Helper()
 
 	// Apply options
@@ -97,72 +95,30 @@ func TestFS(
 		}
 	}
 
-	t.Run("Abs", func(t *testing.T) {
-		testAbs(ctx, t, fsys)
-	})
-	t.Run("Append", func(t *testing.T) {
-		testAppend(ctx, t, fsys)
-	})
-	t.Run("Chmod", func(t *testing.T) {
-		testChmod(ctx, t, fsys)
-	})
-	t.Run("Chown", func(t *testing.T) {
-		testChown(ctx, t, fsys)
-	})
-	t.Run("Chtimes", func(t *testing.T) {
-		testChtimes(ctx, t, fsys)
-	})
-	t.Run("Create", func(t *testing.T) {
-		testCreate(ctx, t, fsys)
-	})
-	t.Run("DirFS", func(t *testing.T) {
-		testDirFS(ctx, t, fsys)
-	})
-	t.Run("Glob", func(t *testing.T) {
-		testGlob(ctx, t, fsys, files)
-	})
-	t.Run("Localize", func(t *testing.T) {
-		testLocalize(ctx, t, fsys)
-	})
-	t.Run("Mkdir", func(t *testing.T) {
-		testMkdir(ctx, t, fsys)
-	})
-	t.Run("ReadDir", func(t *testing.T) {
-		testReadDir(ctx, t, fsys, files)
-	})
-	t.Run("Remove", func(t *testing.T) {
-		testRemove(ctx, t, fsys)
-	})
-	t.Run("Rename", func(t *testing.T) {
-		testRename(ctx, t, fsys)
-	})
-	t.Run("Stat", func(t *testing.T) {
-		testStat(ctx, t, fsys, files)
-	})
-	t.Run("Stress", func(t *testing.T) {
-		testStress(ctx, t, fsys)
-	})
-	t.Run("Symlink", func(t *testing.T) {
-		testSymlink(ctx, t, fsys)
-	})
-	t.Run("Temp", func(t *testing.T) {
-		testTemp(ctx, t, fsys)
-	})
-	t.Run("Truncate", func(t *testing.T) {
-		testTruncate(ctx, t, fsys)
-	})
-	t.Run("Walk", func(t *testing.T) {
-		testWalk(ctx, t, fsys, files)
-	})
-	t.Run("FindUp", func(t *testing.T) {
-		testFindUp(ctx, t, fsys, files)
-	})
+	t.Run("Abs", func(t *testing.T) { testAbs(ctx, t, fsys) })
+	t.Run("Append", func(t *testing.T) { testAppend(ctx, t, fsys) })
+	t.Run("Chmod", func(t *testing.T) { testChmod(ctx, t, fsys) })
+	t.Run("Chown", func(t *testing.T) { testChown(ctx, t, fsys) })
+	t.Run("Chtimes", func(t *testing.T) { testChtimes(ctx, t, fsys) })
+	t.Run("Create", func(t *testing.T) { testCreate(ctx, t, fsys) })
+	t.Run("DirFS", func(t *testing.T) { testDirFS(ctx, t, fsys) })
+	t.Run("Glob", func(t *testing.T) { testGlob(ctx, t, fsys, files) })
+	t.Run("Localize", func(t *testing.T) { testLocalize(ctx, t, fsys) })
+	t.Run("Mkdir", func(t *testing.T) { testMkdir(ctx, t, fsys) })
+	t.Run("ReadDir", func(t *testing.T) { testReadDir(ctx, t, fsys, files) })
+	t.Run("Remove", func(t *testing.T) { testRemove(ctx, t, fsys) })
+	t.Run("Rename", func(t *testing.T) { testRename(ctx, t, fsys) })
+	t.Run("Stat", func(t *testing.T) { testStat(ctx, t, fsys, files) })
+	t.Run("Stress", func(t *testing.T) { testStress(ctx, t, fsys) })
+	t.Run("Symlink", func(t *testing.T) { testSymlink(ctx, t, fsys) })
+	t.Run("Temp", func(t *testing.T) { testTemp(ctx, t, fsys) })
+	t.Run("Truncate", func(t *testing.T) { testTruncate(ctx, t, fsys) })
+	t.Run("Walk", func(t *testing.T) { testWalk(ctx, t, fsys, files) })
+	t.Run("FindUp", func(t *testing.T) { testFindUp(ctx, t, fsys, files) })
 	t.Run("FindUpDotDot", func(t *testing.T) {
 		testFindUpDotDot(ctx, t, fsys, files)
 	})
-	t.Run("WorkDir", func(t *testing.T) {
-		testWorkDir(ctx, t, fsys)
-	})
+	t.Run("WorkDir", func(t *testing.T) { testWorkDir(ctx, t, fsys) })
 }
 
 func normalizePath(p string) []string {
@@ -225,9 +181,7 @@ func defaultTestFiles() []File {
 
 // writeTestFiles writes the test file structure to a writable filesystem.
 // Returns error if the filesystem doesn't support writes.
-func writeTestFiles(
-	ctx context.Context, fsys fs.FS, files []File,
-) error {
+func writeTestFiles(ctx context.Context, fsys fs.FS, files []File) error {
 	for _, file := range files {
 		err := fs.WriteFile(ctx, fsys, file.Path, file.Data)
 		if err != nil {

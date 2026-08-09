@@ -28,9 +28,7 @@ func testTemp(ctx context.Context, t *testing.T, fsys fs.FS) {
 	})
 }
 
-func testTempFileCreateAndWrite(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testTempFileCreateAndWrite(ctx context.Context, t *testing.T, fsys fs.FS) {
 	prefix := "test_tempfile"
 	w, err := fs.Temp(ctx, fsys, prefix)
 	if err != nil {
@@ -164,6 +162,7 @@ func testTempDirPathSeparators(ctx context.Context, t *testing.T, fsys fs.FS) {
 	hasBackward := strings.ContainsRune(name, '\\')
 	if hasForward && hasBackward {
 		t.Errorf("path.Join(%q, %q) returned %q with mixed separators",
-			w.Path(), "foo/bar.txt", name)
+			w.Path(), "foo/bar.txt", name,
+		)
 	}
 }

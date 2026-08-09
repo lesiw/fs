@@ -52,9 +52,7 @@ func Localize(ctx context.Context, fsys FS, path string) (string, error) {
 // localizePath is an internal helper that cleans and localizes a path.
 // It always returns a valid path: if localization is unsupported or fails
 // with ErrUnsupported, it returns the cleaned path. Other errors are returned.
-func localizePath(
-	ctx context.Context, fsys FS, name string,
-) (string, error) {
+func localizePath(ctx context.Context, fsys FS, name string) (string, error) {
 	name = path.Clean(name)
 	lfs, ok := fsys.(LocalizeFS)
 	if !ok {

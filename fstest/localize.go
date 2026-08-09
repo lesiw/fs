@@ -13,9 +13,7 @@ func testLocalize(ctx context.Context, t *testing.T, fsys fs.FS) {
 	})
 }
 
-func testLocalizeIdempotent(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testLocalizeIdempotent(ctx context.Context, t *testing.T, fsys fs.FS) {
 	tests := []struct {
 		name string
 		path string

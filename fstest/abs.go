@@ -56,9 +56,7 @@ func testAbsRelativePath(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testAbsWithAbsoluteWorkDir(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testAbsWithAbsoluteWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	wctx := fs.WithWorkDir(ctx, "/absolute/workdir")
 	abs, err := fs.Abs(wctx, fsys, "file.txt")
 	if err != nil {
@@ -74,9 +72,7 @@ func testAbsWithAbsoluteWorkDir(
 	}
 }
 
-func testAbsWithRelativeWorkDir(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testAbsWithRelativeWorkDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	wctx := fs.WithWorkDir(ctx, "relative/workdir")
 	abs, err := fs.Abs(wctx, fsys, "file.txt")
 	if err != nil {
@@ -95,9 +91,7 @@ func testAbsWithRelativeWorkDir(
 	}
 }
 
-func testAbsWorkDirAffectsResult(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testAbsWorkDirAffectsResult(ctx context.Context, t *testing.T, fsys fs.FS) {
 	noWork, err := fs.Abs(ctx, fsys, "file.txt")
 	if err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {

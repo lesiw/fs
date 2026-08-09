@@ -117,9 +117,7 @@ func setupMinIO() (string, error) {
 			continue
 		}
 
-		ctx, cancel := context.WithTimeout(
-			context.Background(), 2*time.Second,
-		)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		_, err = client.ListBuckets(ctx)
 		cancel()
 		if err != nil {
@@ -127,9 +125,7 @@ func setupMinIO() (string, error) {
 		}
 
 		// MinIO is ready, create test bucket
-		ctx, cancel = context.WithTimeout(
-			context.Background(), 2*time.Second,
-		)
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 		err = client.MakeBucket(ctx, "test-bucket", minio.MakeBucketOptions{})
 		cancel()
 		if err != nil {

@@ -59,9 +59,7 @@ func Glob(ctx context.Context, fsys FS, pattern string) ([]string, error) {
 	return globWithLimit(ctx, fsys, pattern, 0)
 }
 
-func globWithLimit(
-	ctx context.Context, fsys FS, pattern string, depth int,
-) (matches []string, err error) {
+func globWithLimit(ctx context.Context, fsys FS, pattern string, depth int) (matches []string, err error) {
 	// This limit is added to prevent stack exhaustion issues.
 	// See CVE-2022-30630.
 	const pathSeparatorsLimit = 10000
@@ -113,9 +111,7 @@ func globWithLimit(
 // and appends them to matches, returning the updated slice.
 // If the directory cannot be opened, glob returns the existing matches.
 // New matches are added in lexicographical order.
-func glob(
-	ctx context.Context, fsys FS, dir, pattern string, matches []string,
-) (m []string, e error) {
+func glob(ctx context.Context, fsys FS, dir, pattern string, matches []string) (m []string, e error) {
 	m = matches
 
 	// Read directory using ReadDir

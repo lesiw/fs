@@ -71,9 +71,7 @@ users:
 		return "", fmt.Errorf("create temp config file: %w", err)
 	}
 	tmpfilePath := tmpfile.Name()
-	defers.Add(func() {
-		_ = os.Remove(tmpfilePath)
-	})
+	defers.Add(func() { _ = os.Remove(tmpfilePath) })
 
 	if _, err := tmpfile.Write([]byte(configContent)); err != nil {
 		_ = tmpfile.Close()

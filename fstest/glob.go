@@ -31,14 +31,10 @@ func testGlob(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 			testGlobNested(ctx, t, fsys, nestedFiles)
 		})
 	}
-	t.Run("GlobNoMatch", func(t *testing.T) {
-		testGlobNoMatch(ctx, t, fsys)
-	})
+	t.Run("GlobNoMatch", func(t *testing.T) { testGlobNoMatch(ctx, t, fsys) })
 }
 
-func testGlobWildcard(
-	ctx context.Context, t *testing.T, fsys fs.FS, txtFiles []string,
-) {
+func testGlobWildcard(ctx context.Context, t *testing.T, fsys fs.FS, txtFiles []string) {
 	got, err := fs.Glob(ctx, fsys, "*.txt")
 	if err != nil {
 		t.Fatalf("Glob(\"*.txt\") = %v", err)
@@ -49,9 +45,7 @@ func testGlobWildcard(
 	}
 }
 
-func testGlobNested(
-	ctx context.Context, t *testing.T, fsys fs.FS, nestedFiles []string,
-) {
+func testGlobNested(ctx context.Context, t *testing.T, fsys fs.FS, nestedFiles []string) {
 	got, err := fs.Glob(ctx, fsys, "*/*.txt")
 	if err != nil {
 		t.Fatalf("Glob(\"*/*.txt\") = %v", err)

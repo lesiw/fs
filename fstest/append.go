@@ -115,11 +115,13 @@ func testAppendBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 	expected := append(firstHalf, secondHalf...)
 	if !bytes.Equal(readData, expected) {
 		t.Errorf("Binary data corrupted: got %d bytes, want %d",
-			len(readData), len(expected))
+			len(readData), len(expected),
+		)
 		for i := 0; i < len(expected) && i < len(readData); i++ {
 			if expected[i] != readData[i] {
 				t.Errorf("First diff at byte %d: got 0x%02x, want 0x%02x",
-					i, readData[i], expected[i])
+					i, readData[i], expected[i],
+				)
 				break
 			}
 		}
@@ -198,10 +200,12 @@ func testAppendCreatesParent(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if statErr != nil {
 		if !errors.Is(statErr, fs.ErrUnsupported) {
 			t.Errorf("Stat(%q) after virtual directories: %v",
-				"append_auto_dir/nested", statErr)
+				"append_auto_dir/nested", statErr,
+			)
 		}
 	} else if !info.IsDir() {
 		t.Errorf("Stat(%q): IsDir() = false, want true",
-			"append_auto_dir/nested")
+			"append_auto_dir/nested",
+		)
 	}
 }

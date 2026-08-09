@@ -55,9 +55,7 @@ func (f *webdavFS) fullPath(ctx context.Context, name string) string {
 }
 
 // Open implements fs.FS
-func (f *webdavFS) Open(
-	ctx context.Context, name string,
-) (io.ReadCloser, error) {
+func (f *webdavFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	data, err := f.client.Read(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
@@ -71,9 +69,7 @@ func (f *webdavFS) Open(
 }
 
 // Create implements fs.CreateFS
-func (f *webdavFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *webdavFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	return &webdavWriteCloser{
 		client:     f.client,
 		name:       f.fullPath(ctx, name),
@@ -83,9 +79,7 @@ func (f *webdavFS) Create(
 }
 
 // Append implements fs.AppendFS
-func (f *webdavFS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *webdavFS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	fullPath := f.fullPath(ctx, name)
 	wc := &webdavWriteCloser{
 		client:     f.client,
@@ -137,9 +131,7 @@ func (w *webdavWriteCloser) Close() error {
 }
 
 // Stat implements fs.StatFS
-func (f *webdavFS) Stat(
-	ctx context.Context, name string,
-) (fs.FileInfo, error) {
+func (f *webdavFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	info, err := f.client.Stat(f.fullPath(ctx, name))
 	if err != nil {
 		return nil, &fs.PathError{
@@ -158,9 +150,7 @@ func (f *webdavFS) Stat(
 }
 
 // ReadDir implements fs.ReadDirFS
-func (f *webdavFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *webdavFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
 		// Check if this is a file (not a directory)
 		info, statErr := f.Stat(ctx, name)

@@ -9,9 +9,7 @@ import (
 
 var _ fs.ReadDirFS = (*memFS)(nil)
 
-func (f *memFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *memFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	name = resolvePath(ctx, name)
 	if name == "." || name == "/" {
 		name = ""

@@ -9,18 +9,12 @@ import (
 )
 
 func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Run("RemoveFile", func(t *testing.T) {
-		testRemoveFile(ctx, t, fsys)
-	})
-	t.Run("RemoveDir", func(t *testing.T) {
-		testRemoveDir(ctx, t, fsys)
-	})
+	t.Run("RemoveFile", func(t *testing.T) { testRemoveFile(ctx, t, fsys) })
+	t.Run("RemoveDir", func(t *testing.T) { testRemoveDir(ctx, t, fsys) })
 	t.Run("RemoveNonempty", func(t *testing.T) {
 		testRemoveNonempty(ctx, t, fsys)
 	})
-	t.Run("RemoveAll", func(t *testing.T) {
-		testRemoveAll(ctx, t, fsys)
-	})
+	t.Run("RemoveAll", func(t *testing.T) { testRemoveAll(ctx, t, fsys) })
 }
 
 func testRemoveFile(ctx context.Context, t *testing.T, fsys fs.FS) {
@@ -98,9 +92,7 @@ func testRemoveNonempty(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testRemoveAll(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 	_, hasRemoveAll := fsys.(fs.RemoveAllFS)
 	_, hasRemove := fsys.(fs.RemoveFS)
 	_, hasStat := fsys.(fs.StatFS)

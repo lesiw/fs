@@ -9,9 +9,7 @@ import (
 	"lesiw.io/fs/path"
 )
 
-func testFindUp(
-	ctx context.Context, t *testing.T, fsys fs.FS, files []File,
-) {
+func testFindUp(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	var deepDir, rootFile string
 	for _, f := range files {
 		if d := path.Dir(f.Path); deepDir == "" && d != "" {
@@ -45,9 +43,7 @@ func testFindUp(
 	}
 }
 
-func testFindUpDotDot(
-	ctx context.Context, t *testing.T, fsys fs.FS, files []File,
-) {
+func testFindUpDotDot(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 	var deepDir, rootFile string
 	for _, f := range files {
 		if d := path.Dir(f.Path); deepDir == "" && d != "" {

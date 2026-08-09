@@ -41,18 +41,12 @@ func testStatFile(ctx context.Context, t *testing.T, fsys fs.FS, file *File) {
 	}
 
 	if got, want := info.Name(), path.Base(file.Path); got != want {
-		t.Errorf(
-			"Stat(%q): Name() = %q, want %q",
-			file.Path, got, want,
-		)
+		t.Errorf("Stat(%q): Name() = %q, want %q", file.Path, got, want)
 	}
 
 	size := int64(len(file.Data))
 	if got, want := info.Size(), size; got != want {
-		t.Errorf(
-			"Stat(%q): Size() = %d, want %d",
-			file.Path, got, want,
-		)
+		t.Errorf("Stat(%q): Size() = %d, want %d", file.Path, got, want)
 	}
 
 	if file.Mode != 0 {
@@ -74,9 +68,7 @@ func testStatFile(ctx context.Context, t *testing.T, fsys fs.FS, file *File) {
 	}
 }
 
-func testStatDirectory(
-	ctx context.Context, t *testing.T, fsys fs.FS, dir string,
-) {
+func testStatDirectory(ctx context.Context, t *testing.T, fsys fs.FS, dir string) {
 	info, err := fs.Stat(ctx, fsys, dir)
 	if err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {

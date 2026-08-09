@@ -69,9 +69,7 @@ type AppendDirFS interface {
 // preserved.
 //
 // Requires: [AppendDirFS] || [CreateFS]
-func Append(
-	ctx context.Context, fsys FS, name string,
-) (WritePathCloser, error) {
+func Append(ctx context.Context, fsys FS, name string) (WritePathCloser, error) {
 	var err error
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return nil, err
@@ -113,9 +111,7 @@ retry:
 }
 
 // createAppend implements append using CreateFS.
-func createAppend(
-	ctx context.Context, fsys FS, name string,
-) (io.WriteCloser, error) {
+func createAppend(ctx context.Context, fsys FS, name string) (io.WriteCloser, error) {
 	// Open existing file for reading, if it exists.
 	r, err := Open(ctx, fsys, name)
 	if err != nil && !errors.Is(err, ErrNotExist) {
@@ -133,9 +129,7 @@ func createAppend(
 	return newAppendWriter(r, w), nil
 }
 
-func appendDirAsTar(
-	ctx context.Context, fsys FS, dir string,
-) (io.WriteCloser, error) {
+func appendDirAsTar(ctx context.Context, fsys FS, dir string) (io.WriteCloser, error) {
 	dir = path.Dir(dir)
 	if tfs, ok := fsys.(AppendDirFS); ok {
 		w, err := tfs.AppendDir(ctx, dir)
@@ -162,9 +156,7 @@ func appendDirAsTar(
 }
 
 // extractTarToFS reads a tar archive and extracts it to the filesystem.
-func extractTarToFS(
-	ctx context.Context, fsys FS, dir string, r io.Reader,
-) error {
+func extractTarToFS(ctx context.Context, fsys FS, dir string, r io.Reader) error {
 	tr := tar.NewReader(r)
 	_, supportsMkdir := fsys.(MkdirFS)
 

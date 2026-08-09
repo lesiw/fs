@@ -538,8 +538,7 @@ func isRoot(path string, style pathStyle) bool {
 	case styleUnix:
 		return path == "/"
 	case styleWindows:
-		return len(path) == 3 &&
-			isDriveLetter(path[0]) &&
+		return len(path) == 3 && isDriveLetter(path[0]) &&
 			path[1] == ':' && path[2] == '\\'
 	case styleURL:
 		_, after, ok := strings.Cut(path, "://")

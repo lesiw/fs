@@ -140,7 +140,8 @@ func testTruncateBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 	expected := binaryData[:newSize]
 	if len(data) != len(expected) {
 		t.Fatalf("ReadFile(%q) = %d bytes, want %d",
-			fileName, len(data), len(expected))
+			fileName, len(data), len(expected),
+		)
 	}
 
 	for i := range len(expected) {

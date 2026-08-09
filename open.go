@@ -93,9 +93,7 @@ func Open(ctx context.Context, fsys FS, name string) (ReadPathCloser, error) {
 	return readPathCloser(r, name), nil
 }
 
-func openDirAsTar(
-	ctx context.Context, fsys FS, dir string,
-) (io.ReadCloser, error) {
+func openDirAsTar(ctx context.Context, fsys FS, dir string) (io.ReadCloser, error) {
 	dir = path.Dir(dir)
 	if tfs, ok := fsys.(DirFS); ok {
 		r, err := tfs.OpenDir(ctx, dir)
@@ -109,9 +107,7 @@ func openDirAsTar(
 	return walkDirAsTar(ctx, fsys, dir)
 }
 
-func walkDirAsTar(
-	ctx context.Context, fsys FS, dir string,
-) (io.ReadCloser, error) {
+func walkDirAsTar(ctx context.Context, fsys FS, dir string) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
 
 	go func() {
@@ -123,9 +119,7 @@ func walkDirAsTar(
 }
 
 // createTarFromFS walks the filesystem and creates a tar archive.
-func createTarFromFS(
-	ctx context.Context, fsys FS, dir string, w io.Writer,
-) error {
+func createTarFromFS(ctx context.Context, fsys FS, dir string, w io.Writer) error {
 	dir = path.Clean(dir)
 	tw := tar.NewWriter(w)
 	defer tw.Close()

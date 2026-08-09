@@ -17,9 +17,7 @@ import "context"
 // This is analogous to os.WriteFile and io/fs.ReadFile.
 //
 // Requires: [CreateFS]
-func WriteFile(
-	ctx context.Context, fsys FS, name string, data []byte,
-) error {
+func WriteFile(ctx context.Context, fsys FS, name string, data []byte) error {
 	f, err := Create(ctx, fsys, name)
 	if err != nil {
 		return err

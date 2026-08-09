@@ -43,9 +43,7 @@ func (f *httpFS) fullURL(name string) string {
 }
 
 // Open implements fs.FS (read-only).
-func (f *httpFS) Open(
-	ctx context.Context, name string,
-) (io.ReadCloser, error) {
+func (f *httpFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -80,9 +78,7 @@ func (f *httpFS) Open(
 }
 
 // Stat implements fs.StatFS.
-func (f *httpFS) Stat(
-	ctx context.Context, name string,
-) (fs.FileInfo, error) {
+func (f *httpFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 	if name == "" || name == "." {
 		return &httpFileInfo{
 			name:  ".",
@@ -175,9 +171,7 @@ func (fi *httpFileInfo) Mode() fs.Mode {
 }
 
 // Abs implements fs.AbsFS
-func (f *httpFS) Abs(
-	ctx context.Context, name string,
-) (string, error) {
+func (f *httpFS) Abs(ctx context.Context, name string) (string, error) {
 	if path.IsAbs(name) {
 		return path.Clean(name), nil
 	}

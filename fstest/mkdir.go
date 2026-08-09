@@ -9,13 +9,9 @@ import (
 )
 
 func testMkdir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Run("Mkdir", func(t *testing.T) {
-		testMkdirBasic(ctx, t, fsys)
-	})
+	t.Run("Mkdir", func(t *testing.T) { testMkdirBasic(ctx, t, fsys) })
 
-	t.Run("MkdirAll", func(t *testing.T) {
-		testMkdirAll(ctx, t, fsys)
-	})
+	t.Run("MkdirAll", func(t *testing.T) { testMkdirAll(ctx, t, fsys) })
 }
 
 func testMkdirBasic(ctx context.Context, t *testing.T, fsys fs.FS) {
@@ -77,9 +73,7 @@ func testMkdirBasic(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testMkdirAll(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testMkdirAll(ctx context.Context, t *testing.T, fsys fs.FS) {
 	const path = "test_mkdirall/a/b/c"
 
 	_, hasMkdirFS := fsys.(fs.MkdirFS)

@@ -95,9 +95,7 @@ func (f *sftpFS) Close() error {
 }
 
 // Open implements fs.FS.
-func (f *sftpFS) Open(
-	ctx context.Context, name string,
-) (io.ReadCloser, error) {
+func (f *sftpFS) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "open",
@@ -115,9 +113,7 @@ func (f *sftpFS) Open(
 }
 
 // Create implements fs.CreateFS.
-func (f *sftpFS) Create(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *sftpFS) Create(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "create",
@@ -142,9 +138,7 @@ func (f *sftpFS) Create(
 }
 
 // Append implements fs.AppendFS.
-func (f *sftpFS) Append(
-	ctx context.Context, name string,
-) (io.WriteCloser, error) {
+func (f *sftpFS) Append(ctx context.Context, name string) (io.WriteCloser, error) {
 	if name == "" {
 		return nil, &fs.PathError{
 			Op:   "append",
@@ -187,9 +181,7 @@ func (f *sftpFS) Stat(ctx context.Context, name string) (fs.FileInfo, error) {
 }
 
 // ReadDir implements fs.ReadDirFS.
-func (f *sftpFS) ReadDir(
-	ctx context.Context, name string,
-) iter.Seq2[fs.DirEntry, error] {
+func (f *sftpFS) ReadDir(ctx context.Context, name string) iter.Seq2[fs.DirEntry, error] {
 	return func(yield func(fs.DirEntry, error) bool) {
 		if name == "" {
 			name = "."
@@ -221,9 +213,7 @@ func (f *sftpFS) ReadDir(
 }
 
 // Mkdir implements fs.MkdirFS.
-func (f *sftpFS) Mkdir(
-	ctx context.Context, name string,
-) error {
+func (f *sftpFS) Mkdir(ctx context.Context, name string) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "mkdir",
@@ -262,9 +252,7 @@ func (f *sftpFS) Remove(ctx context.Context, name string) error {
 }
 
 // Rename implements fs.RenameFS.
-func (f *sftpFS) Rename(
-	ctx context.Context, oldname, newname string,
-) error {
+func (f *sftpFS) Rename(ctx context.Context, oldname, newname string) error {
 	if oldname == "" || newname == "" {
 		return &fs.PathError{
 			Op:   "rename",
@@ -282,9 +270,7 @@ func (f *sftpFS) Rename(
 }
 
 // Chmod implements fs.ChmodFS.
-func (f *sftpFS) Chmod(
-	ctx context.Context, name string, mode fs.Mode,
-) error {
+func (f *sftpFS) Chmod(ctx context.Context, name string, mode fs.Mode) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chmod",
@@ -319,9 +305,7 @@ func (f *sftpFS) Chown(ctx context.Context, name string, uid, gid int) error {
 }
 
 // Chtimes implements fs.ChtimesFS.
-func (f *sftpFS) Chtimes(
-	ctx context.Context, name string, atime, mtime time.Time,
-) error {
+func (f *sftpFS) Chtimes(ctx context.Context, name string, atime, mtime time.Time) error {
 	if name == "" {
 		return &fs.PathError{
 			Op:   "chtimes",
@@ -339,9 +323,7 @@ func (f *sftpFS) Chtimes(
 }
 
 // Symlink implements fs.SymlinkFS.
-func (f *sftpFS) Symlink(
-	ctx context.Context, oldname, newname string,
-) error {
+func (f *sftpFS) Symlink(ctx context.Context, oldname, newname string) error {
 	if oldname == "" || newname == "" {
 		return &fs.PathError{
 			Op:   "symlink",
@@ -426,6 +408,7 @@ type dirEntry struct {
 
 func (de *dirEntry) Name() string { return de.info.Name() }
 func (de *dirEntry) IsDir() bool  { return de.info.IsDir() }
+
 func (de *dirEntry) Type() fs.Mode {
 	return fs.Mode(de.info.Mode().Type())
 }

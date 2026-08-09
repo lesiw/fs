@@ -17,12 +17,8 @@ func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Run("OpenEmptyDir", func(t *testing.T) {
 		testOpenEmptyDir(ctx, t, fsys)
 	})
-	t.Run("OpenDir", func(t *testing.T) {
-		testOpenDir(ctx, t, fsys)
-	})
-	t.Run("CreateDir", func(t *testing.T) {
-		testCreateDir(ctx, t, fsys)
-	})
+	t.Run("OpenDir", func(t *testing.T) { testOpenDir(ctx, t, fsys) })
+	t.Run("CreateDir", func(t *testing.T) { testCreateDir(ctx, t, fsys) })
 	t.Run("CreateDirRejectsTraversal", func(t *testing.T) {
 		testCreateDirRejectsTraversal(ctx, t, fsys)
 	})
@@ -31,9 +27,7 @@ func testDirFS(ctx context.Context, t *testing.T, fsys fs.FS) {
 // testOpenEmptyDir tests reading an empty directory as a tar stream:
 // the stream must contain no file entries, and at most one TypeDir
 // entry (a self-entry that native DirFS implementations may include).
-func testOpenEmptyDir(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	testDir := "test_openemptydir"
 	err := fs.MkdirAll(ctx, fsys, testDir)
 	if err != nil {
@@ -162,9 +156,7 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 // testCreateDirRejectsTraversal tests that extraction rejects tar entries
 // whose names would escape the target directory.
-func testCreateDirRejectsTraversal(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testCreateDirRejectsTraversal(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if _, ok := fsys.(fs.CreateFS); !ok {
 		t.Skip("CreateFS not supported")
 	}
@@ -215,9 +207,7 @@ func testCreateDirRejectsTraversal(
 }
 
 // testCreateDir tests writing tar streams to create directories.
-func testCreateDir(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testCreateDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	if _, ok := fsys.(fs.CreateFS); !ok {
 		t.Skip("CreateFS not supported")
 	}
@@ -308,10 +298,7 @@ func testCreateDir(
 					t.Fatalf("ReadFile(%q): %v", name, err)
 				}
 				if !bytes.Equal(got, want) {
-					t.Errorf(
-						"ReadFile(%q) = %q, want %q",
-						name, got, want,
-					)
+					t.Errorf("ReadFile(%q) = %q, want %q", name, got, want)
 				}
 			}
 		})

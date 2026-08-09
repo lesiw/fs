@@ -109,7 +109,8 @@ func testCreateTruncates(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 	if len(data) != 0 {
 		t.Errorf("ReadFile(%q) after truncate = %d bytes, want 0",
-			name, len(data))
+			name, len(data),
+		)
 	}
 }
 
@@ -154,7 +155,8 @@ func testCreateBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 		for i := 0; i < len(binaryData) && i < len(readData); i++ {
 			if binaryData[i] != readData[i] {
 				t.Errorf("First diff at byte %d: got 0x%02x, want 0x%02x",
-					i, readData[i], binaryData[i])
+					i, readData[i], binaryData[i],
+				)
 				break
 			}
 		}
@@ -208,7 +210,8 @@ func testWriteFileOverwrite(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	if !bytes.Equal(readData, newData) {
 		t.Errorf("ReadFile(%q) after overwrite = %q, want %q",
-			name, readData, newData)
+			name, readData, newData,
+		)
 	}
 }
 
@@ -238,16 +241,15 @@ func testWriteFileBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 		for i := 0; i < len(binaryData) && i < len(readData); i++ {
 			if binaryData[i] != readData[i] {
 				t.Errorf("First diff at byte %d: got 0x%02x, want 0x%02x",
-					i, readData[i], binaryData[i])
+					i, readData[i], binaryData[i],
+				)
 				break
 			}
 		}
 	}
 }
 
-func testWriteFileCreatesParent(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testWriteFileCreatesParent(ctx context.Context, t *testing.T, fsys fs.FS) {
 	_, hasMkdirFS := fsys.(fs.MkdirFS)
 	if !hasMkdirFS {
 		t.Skip("MkdirFS not supported (required for virtual directories)")
@@ -277,7 +279,8 @@ func testWriteFileCreatesParent(
 	if err != nil {
 		if !errors.Is(err, fs.ErrUnsupported) {
 			t.Errorf("Stat(%q) after virtual directories: %v",
-				"auto_dir/nested", err)
+				"auto_dir/nested", err,
+			)
 		}
 	} else if !info.IsDir() {
 		t.Errorf("Stat(%q): IsDir() = false, want true", "auto_dir/nested")
@@ -310,9 +313,7 @@ func testCreateCreatesParent(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 }
 
-func testVirtualDirectoriesWithMode(
-	ctx context.Context, t *testing.T, fsys fs.FS,
-) {
+func testVirtualDirectoriesWithMode(ctx context.Context, t *testing.T, fsys fs.FS) {
 	_, hasMkdirFS := fsys.(fs.MkdirFS)
 	if !hasMkdirFS {
 		t.Skip("MkdirFS not supported (required for virtual directories)")
@@ -352,7 +353,8 @@ func testVirtualDirectoriesWithMode(
 			mode := info.Mode()
 			if !mode.IsDir() {
 				t.Errorf("Stat(%q): IsDir() = false, want true",
-					"custom_mode_dir")
+					"custom_mode_dir",
+				)
 			}
 			perm := mode.Perm()
 			if perm != 0700 {

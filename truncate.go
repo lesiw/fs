@@ -72,9 +72,7 @@ func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
 	return recreateTruncate(ctx, fsys, name, size)
 }
 
-func recreateTruncate(
-	ctx context.Context, fsys FS, name string, size int64,
-) error {
+func recreateTruncate(ctx context.Context, fsys FS, name string, size int64) error {
 	// Special case: size 0 means create empty file
 	if size == 0 {
 		if err := Remove(ctx, fsys, name); err != nil {
@@ -152,9 +150,7 @@ func recreateTruncate(
 	return w.Close()
 }
 
-func truncateDirAsTar(
-	ctx context.Context, fsys FS, dir string, size int64,
-) error {
+func truncateDirAsTar(ctx context.Context, fsys FS, dir string, size int64) error {
 	dir = path.Dir(dir)
 	if size != 0 {
 		return &PathError{
@@ -176,9 +172,7 @@ func truncateDirAsTar(
 	return recreateTruncateDir(ctx, fsys, dir)
 }
 
-func recreateTruncateDir(
-	ctx context.Context, fsys FS, dir string,
-) error {
+func recreateTruncateDir(ctx context.Context, fsys FS, dir string) error {
 	if sfs, ok := fsys.(StatFS); ok {
 		info, err := sfs.Stat(ctx, dir)
 		if err != nil {

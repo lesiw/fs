@@ -105,7 +105,8 @@ func TestSplit(t *testing.T) {
 			gotDir, gotFile := Split(tt.path)
 			if gotDir != tt.wantDir || gotFile != tt.wantFile {
 				t.Errorf("Split(%q) = (%q, %q), want (%q, %q)",
-					tt.path, gotDir, gotFile, tt.wantDir, tt.wantFile)
+					tt.path, gotDir, gotFile, tt.wantDir, tt.wantFile,
+				)
 			}
 		})
 	}
@@ -430,8 +431,7 @@ func TestSegments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := segments(tt.path)
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("segments(%q) = %v, want %v",
-					tt.path, got, tt.want)
+				t.Errorf("segments(%q) = %v, want %v", tt.path, got, tt.want)
 			}
 		})
 	}
@@ -539,17 +539,18 @@ func TestRel(t *testing.T) {
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Rel(%q, %q) = %q, want error",
-						tt.base, tt.targ, got)
+						tt.base, tt.targ, got,
+					)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("Rel(%q, %q) error: %v",
-					tt.base, tt.targ, err)
+				t.Fatalf("Rel(%q, %q) error: %v", tt.base, tt.targ, err)
 			}
 			if got != tt.want {
 				t.Errorf("Rel(%q, %q) = %q, want %q",
-					tt.base, tt.targ, got, tt.want)
+					tt.base, tt.targ, got, tt.want,
+				)
 			}
 
 			// Verify roundtrip: Join(base, Rel(base, targ))
@@ -590,10 +591,7 @@ func TestVolume(t *testing.T) {
 			style := detectStyle([]string{tt.path})
 			got := volume(tt.path, style)
 			if got != tt.want {
-				t.Errorf(
-					"volume(%q) = %q, want %q",
-					tt.path, got, tt.want,
-				)
+				t.Errorf("volume(%q) = %q, want %q", tt.path, got, tt.want)
 			}
 		})
 	}
@@ -626,7 +624,8 @@ func FuzzRel(f *testing.F) {
 		if !slices.Equal(got, want) {
 			t.Errorf(
 				"Rel(%q, %q) = %q; segments(Join) = %v, want %v",
-				base, targ, rel, got, want)
+				base, targ, rel, got, want,
+			)
 		}
 	})
 }
@@ -657,7 +656,8 @@ func FuzzJoinSplit(f *testing.F) {
 		if got != p {
 			t.Errorf(
 				"Join(Split(%q)) = %q (dir=%q, file=%q)",
-				p, got, dir, file)
+				p, got, dir, file,
+			)
 		}
 	})
 }

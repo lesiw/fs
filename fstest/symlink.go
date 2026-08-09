@@ -10,17 +10,11 @@ import (
 )
 
 func testSymlink(ctx context.Context, t *testing.T, fsys fs.FS) {
-	t.Run("SymlinkFile", func(t *testing.T) {
-		testSymlinkFile(ctx, t, fsys)
-	})
+	t.Run("SymlinkFile", func(t *testing.T) { testSymlinkFile(ctx, t, fsys) })
 
-	t.Run("SymlinkDir", func(t *testing.T) {
-		testSymlinkDir(ctx, t, fsys)
-	})
+	t.Run("SymlinkDir", func(t *testing.T) { testSymlinkDir(ctx, t, fsys) })
 
-	t.Run("ReadLink", func(t *testing.T) {
-		testReadlink(ctx, t, fsys)
-	})
+	t.Run("ReadLink", func(t *testing.T) { testReadlink(ctx, t, fsys) })
 }
 
 func testSymlinkFile(ctx context.Context, t *testing.T, fsys fs.FS) {
@@ -129,8 +123,6 @@ func testReadlink(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	if !pathsEqual([]string{target}, []string{targetFile}) {
-		t.Errorf(
-			"Readlink(%q) = %q, want %q", linkName, target, targetFile,
-		)
+		t.Errorf("Readlink(%q) = %q, want %q", linkName, target, targetFile)
 	}
 }
