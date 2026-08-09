@@ -9,9 +9,11 @@ import (
 )
 
 func testTruncate(ctx context.Context, t *testing.T, fsys fs.FS) {
-	_, hasTruncate := fsys.(fs.TruncateFS)
-	_, hasRemove := fsys.(fs.RemoveFS)
-	_, hasCreate := fsys.(fs.CreateFS)
+	var (
+		_, hasTruncate = fsys.(fs.TruncateFS)
+		_, hasRemove   = fsys.(fs.RemoveFS)
+		_, hasCreate   = fsys.(fs.CreateFS)
+	)
 
 	if !hasTruncate && !hasRemove {
 		t.Skip(
@@ -37,8 +39,10 @@ func testTruncate(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testTruncateShrink(ctx context.Context, t *testing.T, fsys fs.FS) {
-	fileName := "test_truncate_shrink.txt"
-	testData := []byte("hello world this is a test")
+	var (
+		fileName = "test_truncate_shrink.txt"
+		testData = []byte("hello world this is a test")
+	)
 	if err := fs.WriteFile(ctx, fsys, fileName, testData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")
@@ -82,8 +86,10 @@ func testTruncateShrink(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testTruncateExpand(ctx context.Context, t *testing.T, fsys fs.FS) {
-	fileName := "test_truncate_expand.txt"
-	testData := []byte("hello")
+	var (
+		fileName = "test_truncate_expand.txt"
+		testData = []byte("hello")
+	)
 	if err := fs.WriteFile(ctx, fsys, fileName, testData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")

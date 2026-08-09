@@ -93,9 +93,11 @@ func Join(elem ...string) string {
 // Returns ("", file) if path has no directory component.
 // Returns (dir, "") if path ends with a trailing separator (is a directory).
 func Split(path string) (dir, file string) {
-	style := detectStyle([]string{path})
-	sep := string(style.sep)
-	local := "." + sep
+	var (
+		style = detectStyle([]string{path})
+		sep   = string(style.sep)
+		local = "." + sep
+	)
 
 	// Handle trailing separator (directory)
 	if strings.HasSuffix(path, sep) {
@@ -106,7 +108,7 @@ func Split(path string) (dir, file string) {
 	}
 
 	// For URL-style paths, skip the :// when finding the last separator
-	searchStart := 0
+	var searchStart int
 	if style.kind == styleURL {
 		searchStart = strings.Index(path, "://") + 3
 	}
@@ -258,8 +260,10 @@ func Clean(path string) string {
 
 	if style.kind == styleURL {
 		// For URLs, extract protocol://host/ as a single "root" part
-		hostStart := strings.Index(path, "://") + 3
-		hostEnd := strings.Index(path[hostStart:], "/")
+		var (
+			hostStart = strings.Index(path, "://") + 3
+			hostEnd   = strings.Index(path[hostStart:], "/")
+		)
 		if hostEnd < 0 {
 			// No path after host — normalize to include trailing /
 			prefix = path + "/"
@@ -379,8 +383,10 @@ func Clean(path string) string {
 // strong style signal (no backslashes, drive letters, or URL protocols),
 // Unix style is used.
 func Rel(basepath, targpath string) (string, error) {
-	baseSeg, targSeg := segments(basepath), segments(targpath)
-	baseAbs, targAbs := IsAbs(basepath), IsAbs(targpath)
+	var (
+		baseSeg, targSeg = segments(basepath), segments(targpath)
+		baseAbs, targAbs = IsAbs(basepath), IsAbs(targpath)
+	)
 
 	if baseAbs != targAbs {
 		return "", fmt.Errorf(
@@ -389,8 +395,10 @@ func Rel(basepath, targpath string) (string, error) {
 	}
 
 	if baseAbs {
-		baseVol := volume(Clean(basepath), detectStyle([]string{basepath}))
-		targVol := volume(Clean(targpath), detectStyle([]string{targpath}))
+		var (
+			baseVol = volume(Clean(basepath), detectStyle([]string{basepath}))
+			targVol = volume(Clean(targpath), detectStyle([]string{targpath}))
+		)
 		if !strings.EqualFold(baseVol, targVol) {
 			return "", fmt.Errorf(
 				"Rel: can't make %s relative to %s", targpath, basepath,
@@ -463,8 +471,10 @@ func segments(p string) []string {
 func volume(p string, style pathStyle) string {
 	switch style.kind {
 	case styleURL:
-		hostStart := strings.Index(p, "://") + 3
-		slashIdx := strings.Index(p[hostStart:], "/")
+		var (
+			hostStart = strings.Index(p, "://") + 3
+			slashIdx  = strings.Index(p[hostStart:], "/")
+		)
 		if slashIdx < 0 {
 			return p
 		}
@@ -554,11 +564,10 @@ func isRoot(path string, style pathStyle) bool {
 	return false
 }
 
-func splitAll(path string) []string {
+func splitAll(path string) (result []string) {
 	if path == "" {
 		return nil
 	}
-	var result []string
 	for path != "" {
 		dir, file := Split(path)
 		if file != "" {

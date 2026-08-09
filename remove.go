@@ -21,8 +21,7 @@ type RemoveFS interface {
 // empty.
 //
 // Requires: [RemoveFS]
-func Remove(ctx context.Context, fsys FS, name string) error {
-	var err error
+func Remove(ctx context.Context, fsys FS, name string) (err error) {
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err
 	}

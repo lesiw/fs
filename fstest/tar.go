@@ -73,10 +73,11 @@ func testOpenEmptyDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	// Create files in nested directories
 	// (directories created explicitly or implicitly depending on filesystem)
-	testDir := "test_opendir_files"
-
-	file1Data := []byte("file one")
-	file1 := testDir + "/file1.txt"
+	var (
+		testDir   = "test_opendir_files"
+		file1Data = []byte("file one")
+		file1     = testDir + "/file1.txt"
+	)
 	if err := fs.WriteFile(ctx, fsys, file1, file1Data); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")
@@ -131,8 +132,10 @@ func testOpenDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 	}
 
 	for name, expectedData := range expectedFiles {
-		var data []byte
-		var found bool
+		var (
+			data  []byte
+			found bool
+		)
 		for foundPath, foundData := range foundFiles {
 			if pathsEqual([]string{foundPath}, []string{name}) {
 				data = foundData
@@ -170,8 +173,10 @@ func testCreateDirRejectsTraversal(ctx context.Context, t *testing.T, fsys fs.FS
 
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
-			var buf bytes.Buffer
-			tw := tar.NewWriter(&buf)
+			var (
+				buf bytes.Buffer
+				tw  = tar.NewWriter(&buf)
+			)
 			err := tw.WriteHeader(&tar.Header{
 				Name:     name,
 				Typeflag: tar.TypeReg,
@@ -256,8 +261,10 @@ func testCreateDir(ctx context.Context, t *testing.T, fsys fs.FS) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			tw := tar.NewWriter(&buf)
+			var (
+				buf bytes.Buffer
+				tw  = tar.NewWriter(&buf)
+			)
 
 			for _, e := range tt.entries {
 				e.header.Size = int64(len(e.data))

@@ -121,8 +121,7 @@ func TestFS(ctx context.Context, t *testing.T, fsys fs.FS, opts ...TestFSOption)
 	t.Run("WorkDir", func(t *testing.T) { testWorkDir(ctx, t, fsys) })
 }
 
-func normalizePath(p string) []string {
-	var parts []string
+func normalizePath(p string) (parts []string) {
 	for p != "" && p != "." {
 		if path.IsRoot(p) {
 			break

@@ -41,8 +41,10 @@ func testCreate(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testCreateAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
-	name := "test_create.txt"
-	testData := []byte("hello world")
+	var (
+		name     = "test_create.txt"
+		testData = []byte("hello world")
+	)
 
 	f, err := fs.Create(ctx, fsys, name)
 	if err != nil {
@@ -84,9 +86,10 @@ func testCreateAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testCreateTruncates(ctx context.Context, t *testing.T, fsys fs.FS) {
-	name := "test_create_truncate.txt"
-
-	origData := []byte("original data")
+	var (
+		name     = "test_create_truncate.txt"
+		origData = []byte("original data")
+	)
 	if err := fs.WriteFile(ctx, fsys, name, origData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")
@@ -164,8 +167,10 @@ func testCreateBinaryData(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testWriteFileAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
-	name := "test_write.txt"
-	testData := []byte("test data for writefile")
+	var (
+		name     = "test_write.txt"
+		testData = []byte("test data for writefile")
+	)
 
 	if err := fs.WriteFile(ctx, fsys, name, testData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
@@ -186,8 +191,10 @@ func testWriteFileAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testWriteFileOverwrite(ctx context.Context, t *testing.T, fsys fs.FS) {
-	name := "test_write_overwrite.txt"
-	initialData := []byte("initial data")
+	var (
+		name        = "test_write_overwrite.txt"
+		initialData = []byte("initial data")
+	)
 
 	if err := fs.WriteFile(ctx, fsys, name, initialData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {

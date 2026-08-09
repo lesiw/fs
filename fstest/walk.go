@@ -9,8 +9,10 @@ import (
 )
 
 func testWalk(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	_, hasWalk := fsys.(fs.WalkFS)
-	_, hasReadDir := fsys.(fs.ReadDirFS)
+	var (
+		_, hasWalk    = fsys.(fs.WalkFS)
+		_, hasReadDir = fsys.(fs.ReadDirFS)
+	)
 	if !hasWalk && !hasReadDir {
 		t.Skip("Walk not supported (requires WalkFS or ReadDirFS)")
 	}
@@ -36,8 +38,10 @@ func testWalk(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
 }
 
 func testWalkWant(files []File) []string {
-	var want []string
-	seen := make(map[string]bool)
+	var (
+		want []string
+		seen = make(map[string]bool)
+	)
 
 	for _, f := range files {
 		want = append(want, f.Path)

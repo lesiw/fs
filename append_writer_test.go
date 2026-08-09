@@ -9,10 +9,11 @@ import (
 )
 
 func TestAppendWriter_NoExistingContent(t *testing.T) {
-	var buf bytes.Buffer
-	w := newAppendWriter(nil, nopWriteCloser{&buf})
-
-	data := []byte("new content")
+	var (
+		buf  bytes.Buffer
+		w    = newAppendWriter(nil, nopWriteCloser{&buf})
+		data = []byte("new content")
+	)
 	n, err := w.Write(data)
 	if err != nil {
 		t.Fatalf("Write() error = %v", err)
@@ -31,9 +32,11 @@ func TestAppendWriter_NoExistingContent(t *testing.T) {
 }
 
 func TestAppendWriter_WithExistingContent(t *testing.T) {
-	existing := io.NopCloser(strings.NewReader("existing "))
-	var buf bytes.Buffer
-	w := newAppendWriter(existing, nopWriteCloser{&buf})
+	var (
+		existing = io.NopCloser(strings.NewReader("existing "))
+		buf      bytes.Buffer
+		w        = newAppendWriter(existing, nopWriteCloser{&buf})
+	)
 
 	if _, err := w.Write([]byte("appended")); err != nil {
 		t.Fatalf("Write() error = %v", err)
@@ -50,11 +53,12 @@ func TestAppendWriter_WithExistingContent(t *testing.T) {
 }
 
 func TestAppendWriter_MultipleWrites(t *testing.T) {
-	existing := io.NopCloser(strings.NewReader("start "))
-	var buf bytes.Buffer
-	w := newAppendWriter(existing, nopWriteCloser{&buf})
-
-	writes := []string{"one ", "two ", "three"}
+	var (
+		existing = io.NopCloser(strings.NewReader("start "))
+		buf      bytes.Buffer
+		w        = newAppendWriter(existing, nopWriteCloser{&buf})
+		writes   = []string{"one ", "two ", "three"}
+	)
 	for _, data := range writes {
 		if _, err := w.Write([]byte(data)); err != nil {
 			t.Fatalf("Write(%q) error = %v", data, err)
@@ -72,13 +76,13 @@ func TestAppendWriter_MultipleWrites(t *testing.T) {
 }
 
 func TestAppendWriter_LargeContent(t *testing.T) {
-	largeData := strings.Repeat("x", 1024*1024)
-	existing := io.NopCloser(strings.NewReader(largeData))
-
-	var buf bytes.Buffer
-	w := newAppendWriter(existing, nopWriteCloser{&buf})
-
-	appendData := "appended"
+	var (
+		largeData  = strings.Repeat("x", 1024*1024)
+		existing   = io.NopCloser(strings.NewReader(largeData))
+		buf        bytes.Buffer
+		w          = newAppendWriter(existing, nopWriteCloser{&buf})
+		appendData = "appended"
+	)
 	if _, err := w.Write([]byte(appendData)); err != nil {
 		t.Fatalf("Write() error = %v", err)
 	}
@@ -101,11 +105,12 @@ func TestAppendWriter_LargeContent(t *testing.T) {
 }
 
 func TestAppendWriter_ReaderError(t *testing.T) {
-	errReader := iotest.ErrReader(io.ErrUnexpectedEOF)
-	existing := io.NopCloser(errReader)
-
-	var buf bytes.Buffer
-	w := newAppendWriter(existing, nopWriteCloser{&buf})
+	var (
+		errReader = iotest.ErrReader(io.ErrUnexpectedEOF)
+		existing  = io.NopCloser(errReader)
+		buf       bytes.Buffer
+		w         = newAppendWriter(existing, nopWriteCloser{&buf})
+	)
 
 	_, err := w.Write([]byte("data"))
 	if err != io.ErrUnexpectedEOF {
@@ -114,9 +119,11 @@ func TestAppendWriter_ReaderError(t *testing.T) {
 }
 
 func TestAppendWriter_WriterError(t *testing.T) {
-	existing := io.NopCloser(strings.NewReader("existing"))
-	errWriter := &errorWriteCloser{writeErr: io.ErrShortWrite}
-	w := newAppendWriter(existing, errWriter)
+	var (
+		existing  = io.NopCloser(strings.NewReader("existing"))
+		errWriter = &errorWriteCloser{writeErr: io.ErrShortWrite}
+		w         = newAppendWriter(existing, errWriter)
+	)
 
 	_, err := w.Write([]byte("data"))
 	if err != io.ErrShortWrite {
@@ -125,9 +132,11 @@ func TestAppendWriter_WriterError(t *testing.T) {
 }
 
 func TestAppendWriter_CloseError(t *testing.T) {
-	existing := io.NopCloser(strings.NewReader("existing"))
-	errWriter := &errorWriteCloser{closeErr: io.ErrClosedPipe}
-	w := newAppendWriter(existing, errWriter)
+	var (
+		existing  = io.NopCloser(strings.NewReader("existing"))
+		errWriter = &errorWriteCloser{closeErr: io.ErrClosedPipe}
+		w         = newAppendWriter(existing, errWriter)
+	)
 
 	if _, err := w.Write([]byte("data")); err != nil {
 		t.Fatalf("Write() error = %v", err)
@@ -140,9 +149,11 @@ func TestAppendWriter_CloseError(t *testing.T) {
 }
 
 func TestAppendWriter_Streaming(t *testing.T) {
-	existing := io.NopCloser(strings.NewReader("existing "))
-	var buf bytes.Buffer
-	w := newAppendWriter(existing, nopWriteCloser{&buf})
+	var (
+		existing = io.NopCloser(strings.NewReader("existing "))
+		buf      bytes.Buffer
+		w        = newAppendWriter(existing, nopWriteCloser{&buf})
+	)
 
 	if _, err := w.Write([]byte("first ")); err != nil {
 		t.Fatalf("Write() error = %v", err)

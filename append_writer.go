@@ -14,13 +14,15 @@ type appendWriter struct {
 // newAppendWriter creates a writer that appends to existing content.
 // r may be nil if there's no existing content.
 func newAppendWriter(r io.ReadCloser, w io.WriteCloser) io.WriteCloser {
-	pr, pw := io.Pipe()
-	aw := &appendWriter{
-		pr:   pr,
-		pw:   pw,
-		w:    w,
-		done: make(chan error),
-	}
+	var (
+		pr, pw = io.Pipe()
+		aw     = &appendWriter{
+			pr:   pr,
+			pw:   pw,
+			w:    w,
+			done: make(chan error),
+		}
+	)
 
 	go func() {
 		var err error

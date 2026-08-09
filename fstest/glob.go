@@ -10,9 +10,11 @@ import (
 )
 
 func testGlob(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	_, hasGlob := fsys.(fs.GlobFS)
-	_, hasStat := fsys.(fs.StatFS)
-	_, hasReadDir := fsys.(fs.ReadDirFS)
+	var (
+		_, hasGlob    = fsys.(fs.GlobFS)
+		_, hasStat    = fsys.(fs.StatFS)
+		_, hasReadDir = fsys.(fs.ReadDirFS)
+	)
 
 	if !hasGlob && (!hasStat || !hasReadDir) {
 		t.Skip("Glob not supported")
@@ -68,9 +70,10 @@ func testGlobNoMatch(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testGlobWant(files []File, pattern string) []string {
-	var want []string
-
-	patternHasDir := path.Dir(pattern) != "."
+	var (
+		want          []string
+		patternHasDir = path.Dir(pattern) != "."
+	)
 
 	for _, f := range files {
 		matched, err := path.Match(pattern, f.Path)

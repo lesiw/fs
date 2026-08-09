@@ -14,9 +14,11 @@ func testRename(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testRenameFile(ctx context.Context, t *testing.T, fsys fs.FS) {
-	fileData := []byte("data")
-	oldName := "test_rename_file_old.txt"
-	newName := "test_rename_file_new.txt"
+	var (
+		fileData = []byte("data")
+		oldName  = "test_rename_file_old.txt"
+		newName  = "test_rename_file_new.txt"
+	)
 	if err := fs.WriteFile(ctx, fsys, oldName, fileData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")
@@ -55,8 +57,10 @@ func testRenameFile(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testRenameDir(ctx context.Context, t *testing.T, fsys fs.FS) {
-	oldDirName := "test_rename_dir_old"
-	newDirName := "test_rename_dir_new"
+	var (
+		oldDirName = "test_rename_dir_old"
+		newDirName = "test_rename_dir_new"
+	)
 	mkdirErr := fs.Mkdir(ctx, fsys, oldDirName)
 	if errors.Is(mkdirErr, fs.ErrUnsupported) {
 		t.Skip("MkdirFS not supported")

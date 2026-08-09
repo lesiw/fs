@@ -20,7 +20,7 @@ func closeOnCleanup(t *testing.T, c io.Closer) {
 }
 
 func TestOpenBuffer(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "test.txt", []byte("hello"))
 	if err != nil {
@@ -41,9 +41,10 @@ func TestOpenBuffer(t *testing.T) {
 }
 
 func TestOpenBufferNotFound(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	r := fs.OpenBuffer(ctx, fsys, "nonexistent.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		r         = fs.OpenBuffer(ctx, fsys, "nonexistent.txt")
+	)
 	closeOnCleanup(t, r)
 
 	if _, err := io.ReadAll(r); err == nil {
@@ -52,9 +53,10 @@ func TestOpenBufferNotFound(t *testing.T) {
 }
 
 func TestOpenBufferCloseBeforeRead(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	r := fs.OpenBuffer(ctx, fsys, "test.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		r         = fs.OpenBuffer(ctx, fsys, "test.txt")
+	)
 	closeOnCleanup(t, r)
 
 	if err := r.Close(); err != nil {
@@ -63,7 +65,7 @@ func TestOpenBufferCloseBeforeRead(t *testing.T) {
 }
 
 func TestOpenBufferReadAfterClose(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "test.txt", []byte("data"))
 	if err != nil {
@@ -87,7 +89,7 @@ func TestOpenBufferReadAfterClose(t *testing.T) {
 }
 
 func TestOpenBufferMultipleClose(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "test.txt", []byte("data"))
 	if err != nil {
@@ -114,7 +116,7 @@ func TestOpenBufferMultipleClose(t *testing.T) {
 func TestOpenBufferConcurrentReadClose(t *testing.T) {
 	// Test concurrent Read() and Close() calls to detect race conditions.
 	for range 1000 {
-		ctx, fsys := context.Background(), memfs.New()
+		ctx, fsys := t.Context(), memfs.New()
 		fs.WriteFile(ctx, fsys, "test.txt", []byte("data"))
 
 		r := fs.OpenBuffer(ctx, fsys, "test.txt")
@@ -126,9 +128,10 @@ func TestOpenBufferConcurrentReadClose(t *testing.T) {
 }
 
 func TestCreateBuffer(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	w := fs.CreateBuffer(ctx, fsys, "output.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+	)
 	closeOnCleanup(t, w)
 
 	if _, err := io.Copy(w, strings.NewReader("world")); err != nil {
@@ -150,9 +153,10 @@ func TestCreateBuffer(t *testing.T) {
 }
 
 func TestCreateBufferCloseBeforeWrite(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	w := fs.CreateBuffer(ctx, fsys, "output.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+	)
 	closeOnCleanup(t, w)
 
 	if err := w.Close(); err != nil {
@@ -161,9 +165,10 @@ func TestCreateBufferCloseBeforeWrite(t *testing.T) {
 }
 
 func TestCreateBufferWriteAfterClose(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	w := fs.CreateBuffer(ctx, fsys, "output.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+	)
 	closeOnCleanup(t, w)
 
 	if _, err := w.Write([]byte("data")); err != nil {
@@ -180,9 +185,10 @@ func TestCreateBufferWriteAfterClose(t *testing.T) {
 }
 
 func TestCreateBufferWriteAfterCloseUnused(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	w := fs.CreateBuffer(ctx, fsys, "output.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+	)
 	closeOnCleanup(t, w)
 
 	if err := w.Close(); err != nil {
@@ -199,9 +205,10 @@ func TestCreateBufferWriteAfterCloseUnused(t *testing.T) {
 }
 
 func TestCreateBufferMultipleClose(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
-
-	w := fs.CreateBuffer(ctx, fsys, "output.txt")
+	var (
+		ctx, fsys = context.Background(), memfs.New()
+		w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+	)
 	closeOnCleanup(t, w)
 
 	if _, err := w.Write([]byte("data")); err != nil {
@@ -221,9 +228,10 @@ func TestCreateBufferMultipleClose(t *testing.T) {
 func TestCreateBufferConcurrentWriteClose(t *testing.T) {
 	// Test concurrent Write() and Close() calls to detect race conditions.
 	for range 1000 {
-		ctx, fsys := context.Background(), memfs.New()
-
-		w := fs.CreateBuffer(ctx, fsys, "output.txt")
+		var (
+			ctx, fsys = context.Background(), memfs.New()
+			w         = fs.CreateBuffer(ctx, fsys, "output.txt")
+		)
 		closeOnCleanup(t, w)
 
 		go w.Write([]byte("data"))
@@ -232,7 +240,7 @@ func TestCreateBufferConcurrentWriteClose(t *testing.T) {
 }
 
 func TestAppendBuffer(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "log.txt", []byte("first\n"))
 	if err != nil {
@@ -261,7 +269,7 @@ func TestAppendBuffer(t *testing.T) {
 }
 
 func TestCreateBufferDir(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "src/a.txt", []byte("alpha"))
 	if err != nil {
@@ -296,7 +304,7 @@ func TestCreateBufferDir(t *testing.T) {
 }
 
 func TestAppendBufferDir(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "dst/old.txt", []byte("old"))
 	if err != nil {
@@ -339,7 +347,7 @@ func TestAppendBufferDir(t *testing.T) {
 }
 
 func TestBufferCopy(t *testing.T) {
-	ctx, fsys := context.Background(), memfs.New()
+	ctx, fsys := t.Context(), memfs.New()
 
 	err := fs.WriteFile(ctx, fsys, "input.txt", []byte("data"))
 	if err != nil {

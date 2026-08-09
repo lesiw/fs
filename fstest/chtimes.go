@@ -11,8 +11,10 @@ import (
 
 func testChtimes(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Run("Chtimes", func(t *testing.T) {
-		fileName := "test_chtimes_file.txt"
-		testData := []byte("chtimes test")
+		var (
+			fileName = "test_chtimes_file.txt"
+			testData = []byte("chtimes test")
+		)
 		if err := fs.WriteFile(ctx, fsys, fileName, testData); err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")

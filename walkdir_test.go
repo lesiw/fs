@@ -25,7 +25,7 @@ func ExampleWalk_recursive() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	count := 0
+	var count int
 	for entry, err := range fs.Walk(ctx, fsys, "walk", -1) {
 		if err != nil {
 			log.Fatal(err)

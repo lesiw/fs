@@ -18,8 +18,10 @@ func testRemove(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testRemoveFile(ctx context.Context, t *testing.T, fsys fs.FS) {
-	fileData := []byte("data")
-	fileName := "test_remove_file.txt"
+	var (
+		fileData = []byte("data")
+		fileName = "test_remove_file.txt"
+	)
 	if err := fs.WriteFile(ctx, fsys, fileName, fileData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")
@@ -93,10 +95,12 @@ func testRemoveNonempty(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testRemoveAll(ctx context.Context, t *testing.T, fsys fs.FS) {
-	_, hasRemoveAll := fsys.(fs.RemoveAllFS)
-	_, hasRemove := fsys.(fs.RemoveFS)
-	_, hasStat := fsys.(fs.StatFS)
-	_, hasReadDir := fsys.(fs.ReadDirFS)
+	var (
+		_, hasRemoveAll = fsys.(fs.RemoveAllFS)
+		_, hasRemove    = fsys.(fs.RemoveFS)
+		_, hasStat      = fsys.(fs.StatFS)
+		_, hasReadDir   = fsys.(fs.ReadDirFS)
+	)
 
 	if !hasRemoveAll && (!hasRemove || !hasStat || !hasReadDir) {
 		t.Skip(

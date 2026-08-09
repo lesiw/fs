@@ -17,8 +17,7 @@ type ChmodFS interface {
 // Analogous to: [os.Chmod], chmod, 9P Twstat.
 //
 // Requires: [ChmodFS]
-func Chmod(ctx context.Context, fsys FS, name string, mode Mode) error {
-	var err error
+func Chmod(ctx context.Context, fsys FS, name string, mode Mode) (err error) {
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err
 	}

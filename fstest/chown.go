@@ -10,8 +10,10 @@ import (
 
 func testChown(ctx context.Context, t *testing.T, fsys fs.FS) {
 	t.Run("Chown", func(t *testing.T) {
-		fileName := "test_chown_file.txt"
-		testData := []byte("chown test")
+		var (
+			fileName = "test_chown_file.txt"
+			testData = []byte("chown test")
+		)
 		if err := fs.WriteFile(ctx, fsys, fileName, testData); err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {
 				t.Skip("write operations not supported")

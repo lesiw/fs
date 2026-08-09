@@ -19,8 +19,7 @@ type ChownFS interface {
 // This is typically a Unix-specific operation.
 //
 // Requires: [ChownFS]
-func Chown(ctx context.Context, fsys FS, name string, uid, gid int) error {
-	var err error
+func Chown(ctx context.Context, fsys FS, name string, uid, gid int) (err error) {
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err
 	}

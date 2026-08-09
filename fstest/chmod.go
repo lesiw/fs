@@ -14,8 +14,10 @@ func testChmod(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testChmodFile(ctx context.Context, t *testing.T, fsys fs.FS) {
-	fileName := "test_chmod_file.txt"
-	testData := []byte("chmod test")
+	var (
+		fileName = "test_chmod_file.txt"
+		testData = []byte("chmod test")
+	)
 	if err := fs.WriteFile(ctx, fsys, fileName, testData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")

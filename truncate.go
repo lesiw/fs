@@ -50,8 +50,7 @@ type TruncateDirFS interface {
 // empty directory.
 //
 // Requires: [TruncateDirFS] || ([RemoveAllFS] && [MkdirFS])
-func Truncate(ctx context.Context, fsys FS, name string, size int64) error {
-	var err error
+func Truncate(ctx context.Context, fsys FS, name string, size int64) (err error) {
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err
 	}

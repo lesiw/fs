@@ -52,7 +52,7 @@ type osFS struct {
 // All paths are resolved relative to the process's current working directory,
 // or relative to a directory specified via fs.WithWorkDir in the context.
 func New() fs.FS {
-	return &osFS{}
+	return new(osFS)
 }
 
 // NewTemp creates a temporary directory and returns a filesystem with its
@@ -64,7 +64,7 @@ func New() fs.FS {
 // NewTemp never returns an error. If OS temp directory creation fails,
 // it falls back to a local randomized path that will be created on first use.
 func NewTemp() fs.FS {
-	fsys := &osFS{}
+	fsys := new(osFS)
 
 	// Try to use OS temp directory
 	tmpdir, err := os.MkdirTemp("", "osfs-")

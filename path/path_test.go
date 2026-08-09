@@ -588,8 +588,10 @@ func TestVolume(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			style := detectStyle([]string{tt.path})
-			got := volume(tt.path, style)
+			var (
+				style = detectStyle([]string{tt.path})
+				got   = volume(tt.path, style)
+			)
 			if got != tt.want {
 				t.Errorf("volume(%q) = %q, want %q", tt.path, got, tt.want)
 			}

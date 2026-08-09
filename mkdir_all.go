@@ -32,8 +32,7 @@ type MkdirAllFS interface {
 // If name is already a directory, MkdirAll does nothing and returns nil.
 //
 // Requires: [MkdirAllFS] || ([MkdirFS] && [StatFS])
-func MkdirAll(ctx context.Context, fsys FS, name string) error {
-	var err error
+func MkdirAll(ctx context.Context, fsys FS, name string) (err error) {
 	if name, err = localizePath(ctx, fsys, name); err != nil {
 		return err
 	}
@@ -58,8 +57,10 @@ func MkdirAll(ctx context.Context, fsys FS, name string) error {
 // mkdirAllFallback implements MkdirAll using MkdirFS and StatFS.
 func mkdirAllFallback(ctx context.Context, fsys FS, name string) error {
 	// Check if fallback is possible - requires MkdirFS and StatFS
-	mfs, hasMkdir := fsys.(MkdirFS)
-	_, hasStat := fsys.(StatFS)
+	var (
+		mfs, hasMkdir = fsys.(MkdirFS)
+		_, hasStat    = fsys.(StatFS)
+	)
 
 	if !hasMkdir || !hasStat {
 		return &PathError{

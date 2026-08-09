@@ -20,8 +20,7 @@ type RenameFS interface {
 // If newname already exists and is not a directory, Rename replaces it.
 //
 // Requires: [RenameFS] || ([FS] && [CreateFS] && [RemoveFS])
-func Rename(ctx context.Context, fsys FS, oldname, newname string) error {
-	var err error
+func Rename(ctx context.Context, fsys FS, oldname, newname string) (err error) {
 	if oldname, err = localizePath(ctx, fsys, oldname); err != nil {
 		return err
 	}

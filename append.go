@@ -157,8 +157,10 @@ func appendDirAsTar(ctx context.Context, fsys FS, dir string) (io.WriteCloser, e
 
 // extractTarToFS reads a tar archive and extracts it to the filesystem.
 func extractTarToFS(ctx context.Context, fsys FS, dir string, r io.Reader) error {
-	tr := tar.NewReader(r)
-	_, supportsMkdir := fsys.(MkdirFS)
+	var (
+		tr               = tar.NewReader(r)
+		_, supportsMkdir = fsys.(MkdirFS)
+	)
 
 	for {
 		hdr, err := tr.Next()

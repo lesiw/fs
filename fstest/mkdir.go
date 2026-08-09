@@ -15,8 +15,10 @@ func testMkdir(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testMkdirBasic(ctx context.Context, t *testing.T, fsys fs.FS) {
-	const dir = "test_mkdir"
-	const file = dir + "/file.txt"
+	const (
+		dir  = "test_mkdir"
+		file = dir + "/file.txt"
+	)
 
 	_, hasMkdirFS := fsys.(fs.MkdirFS)
 

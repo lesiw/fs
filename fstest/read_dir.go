@@ -36,10 +36,11 @@ func testReadDirDot(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testReadDirCurrent(ctx context.Context, t *testing.T, fsys fs.FS, files []File) {
-	want := testReadDirWant(files)
-
-	var names []string
-	var entries []fs.DirEntry
+	var (
+		want    = testReadDirWant(files)
+		names   []string
+		entries []fs.DirEntry
+	)
 	for e, err := range fs.ReadDir(ctx, fsys, ".") {
 		if err != nil {
 			if errors.Is(err, fs.ErrUnsupported) {

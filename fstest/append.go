@@ -25,9 +25,10 @@ func testAppend(ctx context.Context, t *testing.T, fsys fs.FS) {
 }
 
 func testAppendAndRead(ctx context.Context, t *testing.T, fsys fs.FS) {
-	name := "test_append.txt"
-
-	initialData := []byte("initial")
+	var (
+		name        = "test_append.txt"
+		initialData = []byte("initial")
+	)
 	if err := fs.WriteFile(ctx, fsys, name, initialData); err != nil {
 		if errors.Is(err, fs.ErrUnsupported) {
 			t.Skip("write operations not supported")

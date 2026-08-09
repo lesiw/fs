@@ -113,8 +113,10 @@ func (f *memFS) resolve(name string, follow bool, depth int) (*node, bool) {
 }
 
 func (f *memFS) walkDir(name string) (*node, string, bool) {
-	dir, base := path.Split(name)
-	parent, ok := f.walk(dir)
+	var (
+		dir, base  = path.Split(name)
+		parent, ok = f.walk(dir)
+	)
 	if !ok || !parent.dir {
 		return nil, name, false
 	}
